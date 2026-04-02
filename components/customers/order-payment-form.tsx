@@ -21,14 +21,13 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/currency';
-import { createOrderPaymentSchema } from '@/lib/validations/order-payment.schema';
+import { CreateOrderPaymentInput, createOrderPaymentSchema } from '@/lib/validations/order-payment.schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 interface OrderPaymentFormProps {
   orderId: string;
-  customerId: string;
   totalAmount: number;
   paidAmount: number;
   balanceAmount: number;
@@ -38,7 +37,6 @@ interface OrderPaymentFormProps {
 
 export function OrderPaymentForm({
   orderId,
-  customerId,
   totalAmount,
   paidAmount,
   balanceAmount,
@@ -48,7 +46,7 @@ export function OrderPaymentForm({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const form = useForm({
+  const form = useForm<CreateOrderPaymentInput>({
     resolver: zodResolver(createOrderPaymentSchema),
     defaultValues: {
       salesOrderId: orderId,
@@ -112,7 +110,7 @@ export function OrderPaymentForm({
         </div>
       )}
 
-      <Form {...form}>
+      <Form form={form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}

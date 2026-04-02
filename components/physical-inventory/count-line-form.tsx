@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { addCountLineSchema } from '@/lib/validations/physical-inventory.schema';
+import { AddCountLineInput, addCountLineSchema } from '@/lib/validations/physical-inventory.schema';
 import { Product } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Loader2, Search, X } from 'lucide-react';
@@ -34,7 +34,7 @@ export function CountLineForm({ piId }: CountLineFormProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
 
-  const form = useForm({
+  const form = useForm<AddCountLineInput>({
     resolver: zodResolver(addCountLineSchema),
     defaultValues: {
       physicalInventoryId: piId,
@@ -153,7 +153,7 @@ export function CountLineForm({ piId }: CountLineFormProps) {
         </Alert>
       )}
 
-      <Form {...form}>
+      <Form form={form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {/* Product Selection with Search */}
