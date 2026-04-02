@@ -1,0 +1,158 @@
+# Day Book Schema Models
+
+These models need to be added to prisma/schema.prisma
+
+```prisma
+// Expense Category model for categorizing daily expenses
+model ExpenseCategory {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  code        String?  @unique
+  parentCategoryId String? // For hierarchy
+  parentCategory ExpenseCategory? @relation("ExpenseCategoryHierarchy", fields: [parentCategoryId], references: [id], onDelete: SetNull)
+  childCategories ExpenseCategory[] @relation("ExpenseCategoryHierarchy")
+
+  accountHead String?  // Link to accounting head
+  status      ExpenseCategoryStatus @default(ACTIVE)
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  dayBookEntries DayBookEntry[]
+
+  @@index([parentCategoryId])
+  @@index([code])
+  @@map("expense_categories")
+}
+
+// Main Day Book model
+model DayBook {
+  id                    String          @id @default(uuid())
+  date                  DateTime        @unique // One day book per date
+
+  // Opening balances
+  openingCashBalance    Decimal         @default(0) // Decimal(19,2)
+  openingBankBalance    Decimal         @default(0)
+
+  // Closing balances
+  closingCashBalance    Decimal?        // Set when closed
+  closingBankBalance    Decimal?
+
+  // Cash reconciliation
+  expectedCashBalance   Decimal?        // Calculated during reconciliation
+  actualCashBalance     Decimal?        // From denomination count
+  cashVariance          Decimal?        // Expected - Actual
+  varianceReason        String?         // If variance exceeds tolerance
+
+  // Status tracking
+  status                DayBookStatus   @default(OPEN)
+  isReconciled          Boolean         @default(false)
+  notes                 String?
+
+  // User tracking
+  openedById            String          // User who opened
+  openedBy              User            @relation("DayBookOpenedBy", fields: [openedById], references: [id])
+
+  closedById            String?         // User who closed
+  closedBy              User?           @relation("DayBookClosedBy", fields: [closedById], references: [id])
+  closedAt              DateTime?
+
+  approvedById          String?         // User who approved
+  approvedBy            User?           @relation("DayBookApprovedBy", fields: [approvedById], references: [id])
+  approvedAt            DateTime?
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  // Relations
+  entries               DayBookEntry[]
+  denominations         CashDenomination[]
+
+  @@index([date])
+  @@index([status])
+  @@index([openedById])
+  @@map("day_books")
+}
+
+// Individual entries in the day book
+model DayBookEntry {
+  id                    String          @id @default(uuid())
+  dayBookId             String
+  dayBook               DayBook         @relation(fields: [dayBookId], references: [id], onDelete: Cascade)
+
+  // Entry details
+  entryType             DayBookEntryType
+  entryDate             DateTime
+  description           String
+
+  // Financial details
+  amount                Decimal         // Amount of transaction
+  paymentMethod         PaymentMethod?
+
+  // Related records
+  referenceType         String?         // 'SALES_ORDER', 'PURCHASE_ORDER', 'POS_TRANSACTION', 'PAYMENT'
+  referenceId           String?         // ID of the related transaction
+
+  // Party information
+  partyType             String?         // 'CUSTOMER', 'SUPPLIER', 'EMPLOYEE'
+  partyId               String?
+  partyName             String?
+
+  // Accounting
+  debitAccount          String?         // Account to be debited
+  creditAccount         String?         // Account to be credited
+
+  // Additional info
+  expenseCategoryId     String?
+  expenseCategory       ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
+
+  notes                 String?
+  attachmentUrl         String?         // For receipts, invoices
+
+  // Tracking
+  createdById           String
+  createdBy             User            @relation(fields: [createdById], references: [id])
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([dayBookId])
+  @@index([entryType])
+  @@index([referenceId])
+  @@index([createdById])
+  @@map("day_book_entries")
+}
+
+// Cash denomination tracking
+model CashDenomination {
+  id                    String          @id @default(uuid())
+  dayBookId             String
+  dayBook               DayBook         @relation(fields: [dayBookId], references: [id], onDelete: Cascade)
+
+  // Denomination details
+  denomination          Int             // 2000, 500, 100, 50, 20, 10, 5, 2, 1
+  quantity              Int             // Count of notes/coins
+  totalAmount           Decimal         // quantity * denomination
+
+  notes                 String?         // Any notes about the counting
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@unique([dayBookId, denomination])
+  @@index([dayBookId])
+  @@map("cash_denominations")
+}
+
+// Add these relations to the User model:
+// Add after existing relations in User model:
+// daybooksOpened     DayBook[] @relation("DayBookOpenedBy")
+// daybooksClosed     DayBook[] @relation("DayBookClosedBy")
+// daybooksApproved   DayBook[] @relation("DayBookApprovedBy")
+// dayBookEntries     DayBookEntry[]
+```
+
+Note: Update User model to include the Day Book relations above.

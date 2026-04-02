@@ -1,0 +1,1505 @@
+// --- Added for GRN, Partial Receipt, and Stock Posting ---
+
+model GoodsReceivedNote {
+  id              String      @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  receivedById    String
+  receivedBy      User        @relation("UserGRNsReceived", fields: [receivedById], references: [id])
+  receivedDate    DateTime    @default(now())
+  status          String      @default("PENDING")
+  notes           String?
+  items           GRNItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model GRNItem {
+  id                String   @id @default(uuid())
+  goodsReceivedNoteId String
+  goodsReceivedNote  GoodsReceivedNote @relation(fields: [goodsReceivedNoteId], references: [id])
+  productId         String
+  product           Product  @relation(fields: [productId], references: [id])
+  quantityReceived  Int
+  quantityRejected  Int      @default(0)
+  unitPrice         Decimal  @db.Decimal(12,2)
+  batchNumber       String?
+  expiryDate        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model PartialReceipt {
+  id              String      @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  receivedById    String
+  receivedBy      User        @relation("UserPartialReceipts", fields: [receivedById], references: [id])
+  receivedDate    DateTime    @default(now())
+  status          String      @default("PENDING")
+  notes           String?
+  items           PartialReceiptItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model PartialReceiptItem {
+  id                String   @id @default(uuid())
+  partialReceiptId  String
+  partialReceipt    PartialReceipt @relation(fields: [partialReceiptId], references: [id])
+  productId         String
+  product           Product  @relation(fields: [productId], references: [id])
+  quantityReceived  Int
+  quantityRejected  Int      @default(0)
+  unitPrice         Decimal  @db.Decimal(12,2)
+  batchNumber       String?
+  expiryDate        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model StockPosting {
+  id              String      @id @default(uuid())
+  referenceId     String
+  referenceType   String
+  postingDate     DateTime    @default(now())
+  status          String      @default("POSTED")
+  approvedById    String
+  approvedBy      User        @relation("UserStockPostingsApproved", fields: [approvedById], references: [id])
+  notes           String?
+  items           StockPostingItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model StockPostingItem {
+  id              String      @id @default(uuid())
+  stockPostingId  String
+  stockPosting    StockPosting @relation(fields: [stockPostingId], references: [id])
+  productId       String
+  product         Product     @relation(fields: [productId], references: [id])
+  quantity        Int
+  unitCost        Decimal     @db.Decimal(12,2)
+  batchNumber     String?
+  expiryDate      DateTime?
+  storageLocation String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum SalesOrderPaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  CONFIRMED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum POPaymentStatus {
+  PENDING
+  PARTIALLY_PAID
+  FULLY_PAID
+  OVERPAID
+}
+
+enum PayerType {
+  CUSTOMER
+  SUPPLIER
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  UPI
+  CHEQUE
+  DIGITAL_WALLET
+  CREDIT
+  DEBIT
+  MOBILE_WALLET
+}
+
+enum CardType {
+  CREDIT
+  DEBIT
+  OTHER
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  FAILED
+}
+
+enum ReconciliationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  RETURN
+  POS_SALE
+}
+
+enum POSSessionStatus {
+  OPEN
+  CLOSED
+  SUSPENDED
+}
+
+enum TransactionPaymentMethod {
+  CASH
+  CARD
+  UPI
+  BANK_TRANSFER
+  DIGITAL_WALLET
+  CHEQUE
+  CREDIT
+  DEBIT
+  MOBILE_WALLET
+  MIXED
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum POSPaymentStatus {
+  PENDING
+  PARTIALLY_PAID
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum DayBookStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  APPROVED
+}
+
+enum DayBookEntryType {
+  SALE
+  PURCHASE
+  EXPENSE
+  PAYMENT_IN
+  PAYMENT_OUT
+  BANK_DEPOSIT
+  BANK_WITHDRAWAL
+}
+
+enum ExpenseCategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PhysicalInventoryStatus {
+  DRAFT
+  CONFIRMED
+  DONE
+}
+
+enum CountMethod {
+  FULL_COUNT
+  PARTIAL_COUNT
+  CYCLE_COUNT
+}
+
+
+model User {
+  id                  String    @id @default(uuid())
+  username            String    @unique
+  email               String    @unique
+  password            String // bcrypt hashed
+  contactNumber       String?
+  isActive            Boolean   @default(true)
+  emailVerified       Boolean   @default(false) // New field for email verification
+  failedLoginAttempts Int       @default(0) // New field for account lockout
+  lockoutUntil        DateTime? // New field for account lockout
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  roles                  UserRole[]
+  posSessions            POSSession[]
+  transactions           Transaction[]
+  passwordResetTokens    PasswordResetToken[] // New relation
+  emailVerificationTokens EmailVerificationToken[] // New relation
+  sessions               Session[] // New relation
+  daybooksOpened         DayBook[] @relation("DayBookOpenedBy")
+  daybooksClosed         DayBook[] @relation("DayBookClosedBy")
+  daybooksApproved       DayBook[] @relation("DayBookApprovedBy")
+  dayBookEntries         DayBookEntry[]
+
+  grnsReceived           GoodsReceivedNote[]        @relation("UserGRNsReceived")
+  partialReceipts        PartialReceipt[]           @relation("UserPartialReceipts")
+  stockPostingsApproved  StockPosting[]             @relation("UserStockPostingsApproved")
+  shifts                 Shift[]                    @relation("ShiftManager")
+  
+  // Physical inventory relations
+  physicalInventoriesCreatedBy  PhysicalInventory[]   @relation("PhysicalInventoryCreatedBy")
+  physicalInventoriesConfirmedBy PhysicalInventory[]  @relation("PhysicalInventoryConfirmedBy")
+  
+  // Credit system relations
+  creditTransactionsCreated CreditTransaction[]     @relation("UserCreatedTransaction")
+  creditPaymentsRecorded     CreditPayment[]         @relation("UserRecordedPayment")
+  creditRefundsApproved      CreditRefund[]          @relation("UserApprovedRefund")
+  interestEntriesCreated     InterestEntry[]         @relation("UserCreatedInterest")
+  remindersCreated           PaymentReminder[]       @relation("UserCreatedReminder")
+
+  @@index([username])
+  @@index([email])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // ADMIN, INVENTORY_MANAGER, etc.
+  description String?
+  permissions Json // Array of permission strings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users UserRole[]
+
+  @@index([name])
+  @@map("roles")
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model Category {
+  id               String    @id @default(uuid())
+  name             String    @unique
+  isActive         Boolean   @default(true)
+  description      String?
+  imageUrl         String?
+  parentCategoryId String?
+  deletedAt        DateTime? // New field for soft delete
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Self-referencing relation for hierarchical structure
+  parent   Category?  @relation("CategoryParent", fields: [parentCategoryId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryParent")
+
+  // Relations to other entities
+  products Product[]
+
+  @@index([name])
+  @@index([parentCategoryId])
+  @@map("categories")
+}
+
+model Product {
+  id                    String    @id @default(uuid())
+  name                  String
+  description           String?
+  sku                   String?   @unique
+  barcode               String?   @unique
+  imageUrl              String?
+  price                 Decimal   @db.Decimal(12, 2)
+  costPrice             Decimal?  @db.Decimal(12, 2)
+  stockQuantity         Int       @default(0)
+  reorderLevel          Int?
+  taxRate               Decimal?  @db.Decimal(5, 2)
+  isActive              Boolean   @default(true)
+  deletedAt             DateTime?
+  categoryId            String
+  aiTags                String[]  @default([])
+  visionEmbedding       Json?
+  predictedDemandImpact Decimal?  @db.Decimal(10, 4) // New field
+  forecastedReorderDate DateTime? // New field
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Relations
+  category             Category            @relation(fields: [categoryId], references: [id])
+  images               Image[]
+  variants             ProductVariant[]
+  salesOrderItems      SalesOrderItem[]
+  purchaseOrderItems   PurchaseOrderItem[]
+  inventoryTransactions InventoryTransaction[]
+  transactionItems     TransactionItem[]
+
+  grnItems             GRNItem[]
+  partialReceiptItems  PartialReceiptItem[]
+  stockPostingItems    StockPostingItem[]
+  stockLevels          StockLevel[]
+  physicalInventoryLines PhysicalInventoryLine[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([sku])
+  @@index([barcode])
+  @@map("products")
+}
+
+model InventoryTransaction {
+  id            String                    @id @default(uuid())
+  productId     String
+  type          InventoryTransactionType
+  quantity      Int
+  referenceId   String? // FK to PurchaseOrder, SalesOrder, or Transaction
+  notes         String?
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([type])
+  @@index([referenceId])
+  @@map("inventory_transactions")
+}
+
+model Image {
+  id        String    @id @default(uuid())
+  productId String
+  url       String
+  altText   String?
+  isPrimary Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("images")
+}
+
+model ProductVariant {
+  id              String    @id @default(uuid())
+  productId       String
+  name            String // e.g., "Size: M, Color: Blue"
+  sku             String?   @unique
+  barcode         String?
+  priceAdjustment Decimal   @default(0) @db.Decimal(12, 2)
+  stockQuantity   Int       @default(0)
+  isActive        Boolean   @default(true)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([sku])
+  @@map("product_variants")
+}
+
+
+
+
+
+
+model Customer {
+  id                String    @id @default(uuid())
+  name              String
+  email             String?   @unique
+  contactNumber     String?
+  billingAddress    String?
+  shippingAddress   String?
+  creditLimit       Decimal   @default(0) @db.Decimal(12, 2)
+  outstandingBalance Decimal   @default(0) @db.Decimal(12, 2) // New field
+  creditStatus      CreditStatus @default(ACTIVE)
+  paymentTerms      PaymentTerms @default(NET_30)
+  loyaltyPoints     Int       @default(0)
+  aiSegment         String    @default("NEW")
+  churnRiskScore    Decimal?  @db.Decimal(4, 3)
+  isActive          Boolean   @default(true)
+  deletedAt         DateTime? // New field for soft delete
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  salesOrders SalesOrder[]
+  orderPayments OrderPayment[] @relation("CustomerOrderPayments")
+  payments    Payment[]    @relation("CustomerPayments")
+  transactions Transaction[]
+  
+  // Credit system relations
+  credit                CustomerCredit?
+  creditTransactions    CreditTransaction[]
+  creditPayments        CreditPayment[]
+  creditRefunds         CreditRefund[]
+  paymentReminders      PaymentReminder[]
+  interestEntries       InterestEntry[]
+
+  @@index([name])
+  @@index([email])
+  @@index([contactNumber])
+  @@map("customers")
+}
+
+model SalesOrder {
+  id                  String           @id @default(uuid())
+  customerId          String
+  orderDate           DateTime         @default(now())
+  status              SalesOrderStatus @default(DRAFT)
+  totalAmount         Decimal          @db.Decimal(12, 2)
+  balanceAmount       Decimal          @db.Decimal(12, 2)
+  paidAmount          Decimal          @default(0) @db.Decimal(12, 2)
+  paymentStatus       SalesOrderPaymentStatus @default(UNPAID)
+  aiUpsellSuggestions String[]         @default([])
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  customer Customer         @relation(fields: [customerId], references: [id])
+  items    SalesOrderItem[]
+  payments OrderPayment[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String   @id @default(uuid())
+  salesOrderId String
+  productId    String
+  quantity     Int
+  unitPrice    Decimal  @db.Decimal(12, 2)
+  discount     Decimal  @default(0) @db.Decimal(12, 2)
+  taxAmount    Decimal  @default(0) @db.Decimal(12, 2)
+  subtotal     Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([salesOrderId])
+  @@index([productId])
+  @@map("sales_order_items")
+}
+
+model OrderPayment {
+  id               String        @id @default(uuid())
+  salesOrderId     String
+  customerId       String
+  amount           Decimal       @db.Decimal(12, 2)
+  paymentDate      DateTime      @default(now())
+  paymentMethod    PaymentMethod
+  referenceNumber  String?
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  customer   Customer   @relation("CustomerOrderPayments", fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([salesOrderId])
+  @@index([customerId])
+  @@index([paymentDate])
+  @@map("order_payments")
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  payerId          String
+  payerType        PayerType
+  customerId       String?       // FK to Customer (only if payerType == CUSTOMER)
+  supplierId       String?       // FK to Supplier (only if payerType == SUPPLIER)
+  paymentDate      DateTime      @default(now())
+  amount           Decimal       @db.Decimal(12, 2)
+  paymentMethod    PaymentMethod
+  referenceOrderId String?
+  paymentInsights  String?
+  referenceNumber  String?
+  notes            String?
+  
+  // Enhanced fields for better payment tracking
+  status           String        @default("COMPLETED") // PENDING, COMPLETED, FAILED
+  transactionFee   Decimal       @default(0) @db.Decimal(12, 2)
+  netAmount        Decimal       @db.Decimal(12, 2) // amount - transactionFee
+  currency         String        @default("USD")
+  ipAddress        String?
+  userAgent        String?
+  
+  // Card payment details (optional)
+  cardLast4        String?
+  cardBrand        String? // VISA, MASTERCARD, AMEX, etc.
+  cardType         CardType?
+  
+  // Digital wallet details (optional)
+  walletProvider   String? // APPLE_PAY, GOOGLE_PAY, PAYPAL, etc.
+  walletIdentifier String?
+  
+  // Bank transfer details (optional)
+  bankName         String?
+  accountHolder    String?
+  accountNumber    String? // Encrypted/masked
+  routingNumber    String?
+  
+  // UPI details (optional)
+  upiId            String?
+  
+  // Cheque details (optional)
+  chequeNumber     String?
+  chequeDate       DateTime?
+  chequeBank       String?
+  chequeStatus     String? // PENDING, CLEARED, BOUNCED
+  
+  // Reconciliation
+  isReconciled     Boolean       @default(false)
+  reconciledAt     DateTime?
+  reconciledBy     String?
+  
+  // Metadata
+  metadata         Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations (polymorphic - conditional FKs based on payerType)
+  customer   Customer?        @relation("CustomerPayments", fields: [customerId], references: [id], onDelete: SetNull, map: "fk_payment_customer_id")
+  supplier   Supplier?        @relation("SupplierPayments", fields: [supplierId], references: [id], onDelete: SetNull, map: "fk_payment_supplier_id")
+  transaction Transaction?
+  refunds    PaymentRefund[]
+  reconciliation PaymentReconciliation?
+
+  @@index([payerId])
+  @@index([paymentMethod])
+  @@index([status])
+  @@index([paymentDate])
+  @@index([isReconciled])
+  @@map("payments")
+}
+
+model Supplier {
+  id                String    @id @default(uuid())
+  name              String
+  email             String?   @unique
+  contactNumber     String?
+  address           String?
+  creditLimit       Decimal   @default(0) @db.Decimal(12, 2)
+  outstandingBalance Decimal   @default(0) @db.Decimal(12, 2) // New field
+  isActive          Boolean   @default(true)
+  deletedAt         DateTime? // New field for soft delete
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  purchaseOrders PurchaseOrder[]
+  payments       Payment[] @relation("SupplierPayments")
+
+  @@index([name])
+  @@index([email])
+  @@index([contactNumber])
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id              String              @id @default(uuid())
+  supplierId      String
+  orderDate       DateTime            @default(now())
+  status          PurchaseOrderStatus @default(DRAFT)
+  paymentStatus   POPaymentStatus     @default(PENDING)
+  totalAmount     Decimal             @db.Decimal(12, 2)
+  paidAmount      Decimal             @default(0) @db.Decimal(12, 2)
+  balanceAmount   Decimal             @db.Decimal(12, 2)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    PurchaseOrderItem[]
+
+  grns                GoodsReceivedNote[]
+  partialReceipts      PartialReceipt[]
+
+  @@index([supplierId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(uuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitPrice       Decimal  @db.Decimal(12, 2)
+  discount        Decimal  @default(0) @db.Decimal(12, 2)
+  taxAmount       Decimal  @default(0) @db.Decimal(12, 2)
+  subtotal        Decimal  @db.Decimal(12, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+// --- POS Terminal and Shift Management ---
+model POSTerminal {
+  id              String      @id @default(uuid())
+  terminalNumber  String      @unique
+  location        String?
+  description     String?
+  isActive        Boolean     @default(true)
+  lastSyncAt      DateTime?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  shifts          Shift[]
+  sessions        POSSession[]
+
+  @@index([terminalNumber])
+  @@index([isActive])
+  @@map("pos_terminals")
+}
+
+model Shift {
+  id              String      @id @default(uuid())
+  shiftNumber     String      @unique
+  terminalId      String
+  managerId       String
+  startTime       DateTime
+  endTime         DateTime?
+  status          ShiftStatus @default(OPEN)
+  totalSales      Decimal     @default(0) @db.Decimal(12, 2)
+  totalCash       Decimal     @default(0) @db.Decimal(12, 2)
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  terminal        POSTerminal @relation(fields: [terminalId], references: [id], onDelete: Cascade)
+  manager         User        @relation("ShiftManager", fields: [managerId], references: [id])
+
+  @@index([terminalId])
+  @@index([managerId])
+  @@index([status])
+  @@map("shifts")
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+  RECONCILED
+}
+
+// ===== CREDIT SYSTEM ENUMS =====
+enum CreditStatus {
+  ACTIVE
+  PARTIAL
+  OVERDUE
+  SETTLED
+  CLOSED
+}
+
+enum PaymentTerms {
+  IMMEDIATE
+  NET_7
+  NET_15
+  NET_30
+  NET_60
+  END_OF_MONTH
+  CUSTOM
+}
+
+enum CreditTransactionType {
+  CREDIT_SALE
+  PAYMENT
+  ADJUSTMENT
+  INTEREST
+  REFUND
+  REVERSAL
+}
+
+enum CreditPaymentStatus {
+  PENDING
+  PARTIALLY_PAID
+  FULLY_PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ReminderType {
+  DUE_REMINDER
+  OVERDUE_REMINDER
+  LATE_FEE_NOTICE
+  COLLECTION_NOTICE
+}
+
+enum ReminderStatus {
+  CREATED
+  SENT
+  FAILED
+  ACKNOWLEDGED
+}
+
+model POSSession {
+  id                String            @id @default(uuid())
+  cashierId         String
+  terminalId        String?
+  dayBookId         String?
+  status            POSSessionStatus  @default(OPEN)
+  openingCashAmount Decimal           @db.Decimal(12, 2)
+  closingCashAmount Decimal?          @db.Decimal(12, 2)
+  totalSalesAmount  Decimal           @default(0) @db.Decimal(12, 2)
+  totalCashReceived Decimal           @default(0) @db.Decimal(12, 2)
+  totalCardReceived Decimal           @default(0) @db.Decimal(12, 2)
+  totalDigitalReceived Decimal        @default(0) @db.Decimal(12, 2)
+  totalTransactions Int               @default(0)
+  cashVariance      Decimal           @default(0) @db.Decimal(12, 2)
+  openedAt          DateTime          @default(now())
+  closedAt          DateTime?
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  cashier     User         @relation(fields: [cashierId], references: [id])
+  terminal    POSTerminal? @relation(fields: [terminalId], references: [id], onDelete: SetNull)
+  dayBook     DayBook?      @relation(fields: [dayBookId], references: [id], onDelete: SetNull)
+  transactions Transaction[]
+
+  @@index([cashierId])
+  @@index([terminalId])
+  @@index([dayBookId])
+  @@index([status])
+  @@map("pos_sessions")
+}
+
+model Transaction {
+  id                    String                   @id @default(uuid())
+  transactionNumber     String                   @unique
+  customerId            String?
+  cashierId             String
+  sessionId             String?
+  paymentId             String?                  @unique
+  totalAmount           Decimal                  @db.Decimal(12, 2)
+  taxAmount             Decimal                  @default(0) @db.Decimal(12, 2)
+  discountAmount        Decimal                  @default(0) @db.Decimal(12, 2)
+  paymentMethod         TransactionPaymentMethod
+  status                TransactionStatus        @default(PENDING)
+  loyaltyPointsEarned   Int                      @default(0)
+  loyaltyPointsRedeemed Int                      @default(0)
+  notes                 String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  customer       Customer?        @relation(fields: [customerId], references: [id])
+  cashier        User             @relation(fields: [cashierId], references: [id])
+  session        POSSession?      @relation(fields: [sessionId], references: [id])
+  payment        Payment?         @relation(fields: [paymentId], references: [id])
+  items          TransactionItem[]
+  paymentDetails POSPaymentDetail[]
+  receipt        Receipt?
+  refunds        PaymentRefund[]   @relation("TransactionRefunds")
+
+  @@index([transactionNumber])
+  @@index([customerId])
+  @@index([cashierId])
+  @@index([sessionId])
+  @@index([paymentId])
+  @@index([status])
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id              String   @id @default(uuid())
+  transactionId   String
+  productId       String
+  quantity        Int
+  unitPrice       Decimal  @db.Decimal(12, 2)
+  totalPrice      Decimal  @db.Decimal(12, 2)
+  discountApplied Decimal  @default(0) @db.Decimal(12, 2)
+  taxRate         Decimal? @db.Decimal(5, 2)
+  taxAmount       Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([transactionId])
+  @@index([productId])
+  @@map("transaction_items")
+}
+
+model POSPaymentDetail {
+  id              String             @id @default(uuid())
+  transactionId   String
+  paymentMethod   PaymentMethod
+  amount          Decimal            @db.Decimal(12, 2)
+  referenceNumber String?
+  status          POSPaymentStatus   @default(COMPLETED)
+  notes           String?
+  
+  // Enhanced fields for split payments and tracking
+  sequenceNumber  Int                @default(1) // Track order of split payments
+  transactionFee  Decimal            @default(0) @db.Decimal(12, 2)
+  netAmount       Decimal            @default(0) @db.Decimal(12, 2)
+  
+  // Card payment details
+  cardLast4       String?
+  cardBrand       String?
+  authorizationId String?
+  
+  // Digital wallet details
+  walletProvider  String?
+  walletTransactionId String?
+  
+  // Bank transfer details
+  bankName        String?
+  accountNumber   String?
+  
+  // UPI details
+  upiId           String?
+  
+  // Cheque details
+  chequeNumber    String?
+  chequeDate      DateTime?
+  chequeBank      String?
+  chequeStatus    String?
+  
+  // Metadata
+  metadata        Json?
+  processedAt     DateTime?
+  processedBy     String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@index([paymentMethod])
+  @@index([status])
+  @@map("pos_payment_details")
+}
+
+model PaymentRefund {
+  id                    String        @id @default(uuid())
+  paymentId             String
+  transactionId         String?
+  originalAmount        Decimal       @db.Decimal(12, 2)
+  refundAmount          Decimal       @db.Decimal(12, 2)
+  reason                String
+  status                RefundStatus  @default(PENDING)
+  refundMethod          String? // ORIGINAL_PAYMENT, CASH, STORE_CREDIT, etc.
+  approvedBy            String?
+  processedBy           String?
+  approvedAt            DateTime?
+  processedAt           DateTime?
+  notes                 String?
+  
+  // Metadata
+  metadata              Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  payment     Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  transaction Transaction?    @relation("TransactionRefunds", fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
+  @@index([transactionId])
+  @@index([status])
+  @@map("payment_refunds")
+}
+
+model PaymentReconciliation {
+  id                 String                  @id @default(uuid())
+  paymentId          String                  @unique
+  reconciliationDate DateTime                @default(now())
+  status             ReconciliationStatus    @default(PENDING)
+  notes              String?
+  reconciliedBy      String?
+  verificationMethod String? // MANUAL, AUTOMATED, BANK_FEED
+  metadata           Json?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([status])
+  @@map("payment_reconciliations")
+}
+
+model Receipt {
+  id           String    @id @default(uuid())
+  transactionId String    @unique
+  receiptNumber String    @unique
+  receiptData   String?
+  printCount    Int       @default(0)
+  lastPrintedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("receipts")
+}
+
+model LedgerEntry {
+  id            String    @id @default(uuid())
+  entryDate     DateTime  @default(now())
+  description   String
+  debitAccount  String
+  creditAccount String
+  amount        Decimal   @db.Decimal(12, 2)
+  referenceId   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([entryDate])
+  @@index([debitAccount])
+  @@index([creditAccount])
+  @@map("ledger_entries")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique // Hashed token
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique // Hashed token
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("email_verification_tokens")
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  userId       String
+  refreshToken String    @unique // Hashed refresh token
+  expires      DateTime
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@map("sessions")
+}
+
+// Expense Category model for categorizing daily expenses
+model ExpenseCategory {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  code        String?  @unique
+  parentCategoryId String?
+  parentCategory ExpenseCategory? @relation("ExpenseCategoryHierarchy", fields: [parentCategoryId], references: [id], onDelete: SetNull)
+  childCategories ExpenseCategory[] @relation("ExpenseCategoryHierarchy")
+  
+  accountHead String?
+  status      ExpenseCategoryStatus @default(ACTIVE)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  dayBookEntries DayBookEntry[]
+  
+  @@index([parentCategoryId])
+  @@index([code])
+  @@map("expense_categories")
+}
+
+// Main Day Book model
+model DayBook {
+  id                    String          @id @default(uuid())
+  date                  DateTime        @unique
+  
+  openingCashBalance    Decimal         @default(0) @db.Decimal(12, 2)
+  openingBankBalance    Decimal         @default(0) @db.Decimal(12, 2)
+  
+  closingCashBalance    Decimal?        @db.Decimal(12, 2)
+  closingBankBalance    Decimal?        @db.Decimal(12, 2)
+  
+  expectedCashBalance   Decimal?        @db.Decimal(12, 2)
+  actualCashBalance     Decimal?        @db.Decimal(12, 2)
+  cashVariance          Decimal?        @db.Decimal(12, 2)
+  varianceReason        String?
+  
+  status                DayBookStatus   @default(OPEN)
+  isReconciled          Boolean         @default(false)
+  notes                 String?
+  
+  openedById            String
+  openedBy              User            @relation("DayBookOpenedBy", fields: [openedById], references: [id])
+  
+  closedById            String?
+  closedBy              User?           @relation("DayBookClosedBy", fields: [closedById], references: [id])
+  closedAt              DateTime?
+  
+  approvedById          String?
+  approvedBy            User?           @relation("DayBookApprovedBy", fields: [approvedById], references: [id])
+  approvedAt            DateTime?
+  
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  
+  entries               DayBookEntry[]
+  denominations         CashDenomination[]
+  posSessions           POSSession[]
+  
+  @@index([date])
+  @@index([status])
+  @@index([openedById])
+  @@map("day_books")
+}
+
+// Individual entries in the day book
+model DayBookEntry {
+  id                    String          @id @default(uuid())
+  dayBookId             String
+  dayBook               DayBook         @relation(fields: [dayBookId], references: [id], onDelete: Cascade)
+  
+  entryType             DayBookEntryType
+  entryDate             DateTime
+  description           String
+  
+  amount                Decimal         @db.Decimal(12, 2)
+  paymentMethod         PaymentMethod?
+  
+  referenceType         String?
+  referenceId           String?
+  
+  partyType             String?
+  partyId               String?
+  partyName             String?
+  
+  debitAccount          String?
+  creditAccount         String?
+  
+  expenseCategoryId     String?
+  expenseCategory       ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
+  
+  notes                 String?
+  attachmentUrl         String?
+  
+  createdById           String
+  createdBy             User            @relation(fields: [createdById], references: [id])
+  
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  
+  @@index([dayBookId])
+  @@index([entryType])
+  @@index([referenceId])
+  @@index([createdById])
+  @@map("day_book_entries")
+}
+
+// Cash denomination tracking
+model CashDenomination {
+  id                    String          @id @default(uuid())
+  dayBookId             String
+  dayBook               DayBook         @relation(fields: [dayBookId], references: [id], onDelete: Cascade)
+  
+  denomination          Int
+  quantity              Int
+  totalAmount           Decimal         @db.Decimal(12, 2)
+  
+  notes                 String?
+  
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  
+  @@unique([dayBookId, denomination])
+  @@index([dayBookId])
+  @@map("cash_denominations")
+}
+
+// ===== CUSTOMER CREDIT SYSTEM MODELS =====
+
+model CustomerCredit {
+  id                String   @id @default(uuid())
+  customerId        String   @unique
+  status            CreditStatus @default(ACTIVE)
+  totalLimit        Decimal  @db.Decimal(12, 2)
+  totalUtilized     Decimal  @default(0) @db.Decimal(12, 2)
+  totalCreditSales  Decimal  @default(0) @db.Decimal(12, 2)
+  totalPayments     Decimal  @default(0) @db.Decimal(12, 2)
+  totalInterest     Decimal  @default(0) @db.Decimal(12, 2)
+  totalRefunds      Decimal  @default(0) @db.Decimal(12, 2)
+  outstandingAmount Decimal  @default(0) @db.Decimal(12, 2)
+  overdueDays       Int      @default(0)
+  lastPaymentDate   DateTime?
+  nextDueDate       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  customer          Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  transactions      CreditTransaction[]
+  payments          CreditPayment[]
+  interestEntries   InterestEntry[]
+  refunds           CreditRefund[]
+  reminders         PaymentReminder[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("customer_credits")
+}
+
+model CreditTransaction {
+  id                  String   @id @default(uuid())
+  customerCreditId    String
+  customerId          String
+  createdByUserId     String
+  transactionType     CreditTransactionType @default(CREDIT_SALE)
+  description         String?
+  amount              Decimal  @db.Decimal(12, 2)
+  transactionDate     DateTime @default(now())
+  dueDate             DateTime
+  paymentTerms        PaymentTerms @default(NET_30)
+  paidAmount          Decimal  @default(0) @db.Decimal(12, 2)
+  balanceAmount       Decimal  @db.Decimal(12, 2)
+  isFullyPaid         Boolean  @default(false)
+  reference           String?  // Invoice number or reference
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  customerCredit      CustomerCredit    @relation(fields: [customerCreditId], references: [id], onDelete: Cascade)
+  customer            Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdByUser       User              @relation("UserCreatedTransaction", fields: [createdByUserId], references: [id])
+  paymentAllocations  PaymentAllocation[]
+  interestEntries     InterestEntry[]
+
+  @@index([customerCreditId])
+  @@index([customerId])
+  @@index([dueDate])
+  @@index([isFullyPaid])
+  @@map("credit_transactions")
+}
+
+model CreditPayment {
+  id                  String   @id @default(uuid())
+  customerCreditId    String
+  customerId          String
+  recordedByUserId    String
+  bulkBatchId         String?
+  paymentMethod       PaymentMethod @default(CASH)
+  amount              Decimal  @db.Decimal(12, 2)
+  paymentDate         DateTime @default(now())
+  reference           String?  // Payment reference/transaction ID
+  notes               String?
+  status              CreditPaymentStatus @default(PENDING)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  customerCredit      CustomerCredit        @relation(fields: [customerCreditId], references: [id], onDelete: Cascade)
+  customer            Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  recordedByUser      User                  @relation("UserRecordedPayment", fields: [recordedByUserId], references: [id])
+  bulkBatch           BulkPaymentBatch?     @relation(fields: [bulkBatchId], references: [id], onDelete: SetNull)
+  paymentAllocations  PaymentAllocation[]
+  refunds             CreditRefund[]
+
+  @@index([customerCreditId])
+  @@index([customerId])
+  @@index([paymentDate])
+  @@index([status])
+  @@map("credit_payments")
+}
+
+// Junction table for allocating payments to specific credit transactions
+model PaymentAllocation {
+  creditPaymentId     String
+  creditTransactionId String
+  allocatedAmount     Decimal  @db.Decimal(12, 2)
+  createdAt           DateTime @default(now())
+
+  // Relations
+  creditPayment       CreditPayment       @relation(fields: [creditPaymentId], references: [id], onDelete: Cascade)
+  creditTransaction   CreditTransaction   @relation(fields: [creditTransactionId], references: [id], onDelete: Cascade)
+
+  @@id([creditPaymentId, creditTransactionId])
+  @@index([creditPaymentId])
+  @@index([creditTransactionId])
+  @@map("payment_allocations")
+}
+
+model InterestEntry {
+  id                  String   @id @default(uuid())
+  customerCreditId    String
+  customerId          String
+  createdByUserId     String
+  creditTransactionId String?
+  amount              Decimal  @db.Decimal(12, 2)
+  rate                Decimal  @db.Decimal(5, 2)
+  applicableRate      Decimal  @db.Decimal(5, 2)
+  period              Int      // days overdue
+  description         String? // Reason for interest (late fee, daily interest, etc.)
+  calculatedDate      DateTime @default(now())
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  customerCredit      CustomerCredit    @relation(fields: [customerCreditId], references: [id], onDelete: Cascade)
+  customer            Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdByUser       User              @relation("UserCreatedInterest", fields: [createdByUserId], references: [id])
+  creditTransaction   CreditTransaction? @relation(fields: [creditTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([customerCreditId])
+  @@index([customerId])
+  @@index([calculatedDate])
+  @@map("interest_entries")
+}
+
+model CreditRefund {
+  id                  String   @id @default(uuid())
+  customerId          String
+  approvedByUserId    String
+  customerCreditId    String
+  creditPaymentId     String?
+  amount              Decimal  @db.Decimal(12, 2)
+  reason              String
+  refundDate          DateTime @default(now())
+  reference           String?
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  approvedByUser      User                @relation("UserApprovedRefund", fields: [approvedByUserId], references: [id])
+  customerCredit      CustomerCredit      @relation(fields: [customerCreditId], references: [id], onDelete: Cascade)
+  creditPayment       CreditPayment?      @relation(fields: [creditPaymentId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([customerCreditId])
+  @@index([refundDate])
+  @@map("credit_refunds")
+}
+
+model PaymentReminder {
+  id                  String   @id @default(uuid())
+  customerId          String
+  customerCreditId    String
+  createdByUserId     String
+  reminderType        ReminderType
+  status              ReminderStatus @default(CREATED)
+  scheduledDate       DateTime
+  sentDate            DateTime?
+  acknowledgedDate    DateTime?
+  channel             String? // SMS, EMAIL, WHATSAPP, etc.
+  message             String?
+  deliveryStatus      String? // For tracking SMS/Email delivery
+  failureReason       String?
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  customer            Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerCredit      CustomerCredit    @relation(fields: [customerCreditId], references: [id], onDelete: Cascade)
+  createdByUser       User              @relation("UserCreatedReminder", fields: [createdByUserId], references: [id])
+
+  @@index([customerId])
+  @@index([customerCreditId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@map("payment_reminders")
+}
+
+model BulkPaymentBatch {
+  id                String   @id @default(uuid())
+  batchNumber       String   @unique
+  totalCustomers    Int
+  totalAmount       Decimal  @db.Decimal(12, 2)
+  processedCount    Int      @default(0)
+  successCount      Int      @default(0)
+  failureCount      Int      @default(0)
+  batchDate         DateTime @default(now())
+  completedAt       DateTime?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  payments          CreditPayment[]
+
+  @@index([batchNumber])
+  @@index([batchDate])
+  @@map("bulk_payment_batches")
+}
+
+// ============== PHYSICAL INVENTORY ==============
+
+model Location {
+  id              String      @id @default(uuid())
+  name            String      @unique
+  code            String      @unique
+  description     String?
+  type            String      // WAREHOUSE, SECTION, SHELF
+  parentLocationId String?     // For hierarchical locations
+  parentLocation  Location?   @relation("LocationHierarchy", fields: [parentLocationId], references: [id])
+  childLocations  Location[]  @relation("LocationHierarchy")
+  isActive        Boolean     @default(true)
+  
+  // Relations
+  physicalCounts  PhysicalInventory[]
+  stockLevels     StockLevel[]
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([parentLocationId])
+  @@map("locations")
+}
+
+model StockLevel {
+  id              String      @id @default(uuid())
+  productId       String
+  locationId      String
+  quantity        Int         @default(0)
+  
+  // Relations
+  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location        Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  
+  updatedAt       DateTime    @updatedAt
+  
+  @@unique([productId, locationId])
+  @@index([productId])
+  @@index([locationId])
+  @@map("stock_levels")
+}
+
+model PhysicalInventory {
+  id                  String                      @id @default(uuid())
+  referenceNumber     String                      @unique
+  locationId          String
+  location            Location                    @relation(fields: [locationId], references: [id])
+  
+  status              PhysicalInventoryStatus     @default(DRAFT)
+  
+  countDate           DateTime
+  countMethod         CountMethod                 @default(FULL_COUNT)
+  notes               String?
+  
+  // Audit trail
+  createdById         String
+  createdBy           User                        @relation("PhysicalInventoryCreatedBy", fields: [createdById], references: [id])
+  confirmedById       String?
+  confirmedBy         User?                       @relation("PhysicalInventoryConfirmedBy", fields: [confirmedById], references: [id])
+  confirmedAt         DateTime?
+  
+  // Variance summary
+  totalVariance       Int                         @default(0)
+  variancePercentage  Decimal?                    @db.Decimal(5,2)
+  
+  // Relations
+  lines               PhysicalInventoryLine[]
+  
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  
+  @@index([locationId])
+  @@index([status])
+  @@index([countDate])
+  @@map("physical_inventories")
+}
+
+model PhysicalInventoryLine {
+  id                      String                  @id @default(uuid())
+  physicalInventoryId     String
+  physicalInventory       PhysicalInventory       @relation(fields: [physicalInventoryId], references: [id], onDelete: Cascade)
+  
+  productId               String
+  product                 Product                 @relation(fields: [productId], references: [id])
+  
+  // Quantities
+  systemQuantity          Int                     // Stock in system before count
+  physicalQuantity        Int?                    // Actual count (null = not counted yet)
+  variance                Int?                    // physicalQuantity - systemQuantity
+  
+  // Optional Details
+  batchNumber             String?
+  expiryDate              DateTime?
+  notes                   String?
+  
+  // Counting Audit Trail
+  countedBy               String?
+  countedAt               DateTime?
+  isVerified              Boolean                 @default(false)
+  
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  
+  @@unique([physicalInventoryId, productId, batchNumber])
+  @@index([physicalInventoryId])
+  @@index([productId])
+  @@map("physical_inventory_lines")
+}

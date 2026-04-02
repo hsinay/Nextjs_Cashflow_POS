@@ -1,0 +1,76 @@
+// app/(dashboard)/purchase-orders/page.tsx
+
+import { PurchaseOrderListClient } from '@/components/purchase-orders/purchase-order-list-client';
+import { Button } from '@/components/ui/button';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { getAllPurchaseOrders } from '@/services/purchase-order.service';
+import { Plus } from 'lucide-react';
+import { getServerSession } from 'next-auth';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+interface PurchaseOrdersPageProps {
+  searchParams: {
+    search?: string;
+    supplier?: string;
+    status?: string;
+    page?: string;
+    limit?: string;
+  };
+}
+
+export default async function PurchaseOrdersPage({ searchParams }: PurchaseOrdersPageProps) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect('/login');
+  }
+
+  const filters = {
+    search: searchParams.search,
+    supplierId: searchParams.supplier,
+    status: searchParams.status,
+    page: searchParams.page ? parseInt(searchParams.page) : 1,
+    limit: searchParams.limit ? parseInt(searchParams.limit) : 10,
+  }
+
+  const { orders, pagination } = await getAllPurchaseOrders(filters);
+  const suppliers = await prisma.supplier.findMany({ where: { isActive: true }, orderBy: { name: 'asc' }});
+  // Convert creditLimit and outstandingBalance to number for each supplier
+  const suppliersWithConvertedCreditLimit = suppliers.map(supplier => ({
+    ...supplier,
+    creditLimit: supplier.creditLimit.toNumber(),
+    outstandingBalance: supplier.outstandingBalance.toNumber(),
+  }));
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-slate-900">Purchase Orders</h1>
+          <p className="text-slate-600">
+            Manage your supplier orders
+          </p>
+        </div>
+        <Link href="/dashboard/purchase-orders/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Purchase Order
+          </Button>
+        </Link>
+      </div>
+
+      {/* Search and Filters */}
+      <PurchaseOrderListClient
+        initialSearch={searchParams.search || ''}
+        initialSupplier={searchParams.supplier || ''}
+        initialStatus={searchParams.status || ''}
+        suppliers={suppliersWithConvertedCreditLimit}
+        orders={orders}
+        pagination={pagination}
+      />
+    </div>
+  );
+}

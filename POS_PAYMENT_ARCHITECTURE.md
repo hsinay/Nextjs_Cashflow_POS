@@ -1,0 +1,468 @@
+# POS Payment Component - Architecture Diagram
+
+## 🏗️ System Architecture
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                         NEXT.JS APPLICATION                        │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                    POS Page (/dashboard/pos)                 │  │
+│  │                                                               │  │
+│  │  ┌─────────────────────┐         ┌──────────────────────┐   │  │
+│  │  │   Product Grid      │         │  Shopping Cart Side  │   │  │
+│  │  │                     │         │  ┌────────────────┐  │   │  │
+│  │  │  [Product Tiles]    │◄──────►│  │  Order Summary │  │   │  │
+│  │  │  Click to add cart  │         │  ├────────────────┤  │   │  │
+│  │  │                     │         │  │ "Process       │  │   │  │
+│  │  └─────────────────────┘         │  │  Payment" Btn  │  │   │  │
+│  │                                   │  │      ▼         │  │   │  │
+│  │                                   │  │   Opens Modal  │  │   │  │
+│  │                                   │  └────────────────┘  │   │  │
+│  │                                   └──────────────────────┘   │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                    │                                │
+│                                    ▼                                │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │          POSPaymentPanel (Modal Dialog)                      │  │
+│  │                                                               │  │
+│  │  ┌────────────────────────────────────────────────────────┐ │  │
+│  │  │ OrderSummary Component (Read-Only)                    │ │  │
+│  │  │ ┌─────────────────────────────────────────────────┐   │ │  │
+│  │  │ │ Subtotal: $45.99                               │   │ │  │
+│  │  │ │ Tax:      $2.00                                │   │ │  │
+│  │  │ │ Total:    $47.99  (BLUE, Large)               │   │ │  │
+│  │  │ └─────────────────────────────────────────────────┘   │ │  │
+│  │  └────────────────────────────────────────────────────────┘ │  │
+│  │                                                               │  │
+│  │  ┌────────────────────────────────────────────────────────┐ │  │
+│  │  │ PaymentMethodSelector Component                       │ │  │
+│  │  │                                                        │ │  │
+│  │  │ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────────┐     │ │  │
+│  │  │ │ 💵   │ │ 💳   │ │ 🎴   │ │ ⚡   │ │ 💱      │     │ │  │
+│  │  │ │CASH  │ │CREDIT│ │ CARD │ │ UPI  │ │ WALLET  │     │ │  │
+│  │  │ └──────┘ └──────┘ └──────┘ └──────┘ └──────────┘     │ │  │
+│  │  │ (Selected = Blue, Others = Colored)                  │ │  │
+│  │  └────────────────────────────────────────────────────────┘ │  │
+│  │                                                               │  │
+│  │  ┌────────────────────────────────────────────────────────┐ │  │
+│  │  │ CustomerSelector Component (if CREDIT selected)       │ │  │
+│  │  │                                                        │ │  │
+│  │  │ ┌────────────────────────────────────────────────┐   │ │  │
+│  │  │ │ [Walk-in Customer ▼]  ← Dropdown             │   │ │  │
+│  │  │ │ ┌─ Search Products... ────────────────────┐  │   │ │  │
+│  │  │ │ │ Walk-in Customer                        │  │   │ │  │
+│  │  │ │ │ ✓ John Doe (555-1234)   Due: $100.00   │  │   │ │  │
+│  │  │ │ │   Jane Smith (555-5678)  Due: $50.00   │  │   │ │  │
+│  │  │ │ │ ✓ Bob Johnson             Due: $0.00   │  │   │ │  │
+│  │  │ │ └─────────────────────────────────────────┘  │   │ │  │
+│  │  │ └────────────────────────────────────────────────┘   │ │  │
+│  │  └────────────────────────────────────────────────────────┘ │  │
+│  │                                                               │  │
+│  │  ┌────────────────────────────────────────────────────────┐ │  │
+│  │  │ NumericKeypad Component                              │ │  │
+│  │  │                                                        │ │  │
+│  │  │ Display: [50.00] ◄─ Read-only (formatted)            │ │  │
+│  │  │                                                        │ │  │
+│  │  │ ┌─────────────────────────────────────────────┐      │ │  │
+│  │  │ │  7  │  8  │  9  │ DEL │                   │      │ │  │
+│  │  │ │─────┼─────┼─────┼─────│                   │      │ │  │
+│  │  │ │  4  │  5  │  6  │  .  │  Keyboard        │      │ │  │
+│  │  │ │─────┼─────┼─────┼─────│  Support:        │      │ │  │
+│  │  │ │  1  │  2  │  3  │ CLR │  • 0-9 keys      │      │ │  │
+│  │  │ │─────┼─────┼─────┼─────│  • . for decimal │      │ │  │
+│  │  │ │  0  │ 00  │BACK │     │  • Enter = OK    │      │ │  │
+│  │  │ └─────────────────────────────────────────────┘      │ │  │
+│  │  │                                                        │ │  │
+│  │  │ Change Display (CASH only):                          │ │  │
+│  │  │ ┌─────────────────────────────────────────┐         │ │  │
+│  │  │ │ Change: $2.01  (Green, Large)          │         │ │  │
+│  │  │ └─────────────────────────────────────────┘         │ │  │
+│  │  └────────────────────────────────────────────────────────┘ │  │
+│  │                                                               │  │
+│  │  ┌────────────────────────────────────────────────────────┐ │  │
+│  │  │ Action Buttons                                         │ │  │
+│  │  │                                                        │ │  │
+│  │  │  [Cancel]          [Confirm Payment - $50.00] ► GO   │ │  │
+│  │  │  (outline)         (GREEN, large)                    │ │  │
+│  │  └────────────────────────────────────────────────────────┘ │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                    │                                │
+│                     Confirm?       │     Cancel?                   │
+│                         ▼          ▼          ▼                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  pos-client.tsx handleConfirmPayment(paymentData)            │  │
+│  │                                                               │  │
+│  │  ┌──────────────────────────────────────────────────────┐   │  │
+│  │  │ Prepare TransactionData:                            │   │  │
+│  │  │ {                                                    │   │  │
+│  │  │   transactionNumber: "TRX-1734677140000",          │   │  │
+│  │  │   cashierId: "user-123",                           │   │  │
+│  │  │   sessionId: "session-456",                        │   │  │
+│  │  │   customerId: "cust-789", (optional)               │   │  │
+│  │  │   items: [...],                                    │   │  │
+│  │  │   paymentDetails: [{                               │   │  │
+│  │  │     paymentMethod: "CASH",                         │   │  │
+│  │  │     amount: 50.00                                  │   │  │
+│  │  │   }]                                               │   │  │
+│  │  │ }                                                  │   │  │
+│  │  └──────────────────────────────────────────────────────┘   │  │
+│  │                          │                                    │  │
+│  │                          ▼                                    │  │
+│  │  POST /api/pos/transactions                                  │  │
+│  │  (EXISTING ENDPOINT - NO CHANGES)                            │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                          │                                           │
+└──────────────────────────┼───────────────────────────────────────────┘
+                           │
+                           ▼
+           ┌───────────────────────────────────┐
+           │  pos.service.ts (UNCHANGED)       │
+           │  createTransaction()              │
+           │                                    │
+           │  ├─ Create transaction record    │
+           │  ├─ Create payment record        │
+           │  ├─ Update inventory             │
+           │  ├─ Call ledger service          │
+           │  └─ Update session totals        │
+           └────────────────────┬──────────────┘
+                                │
+           ┌────────────────────┼────────────────────┐
+           ▼                    ▼                    ▼
+    ┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+    │  Prisma DB  │    │ Ledger Svc   │    │Payment Svc   │
+    │   Txn Tbl   │    │ (Auto Entry)  │    │ (Recording)  │
+    └─────────────┘    └──────────────┘    └──────────────┘
+           │
+           ▼
+  ┌──────────────────────┐
+  │ Modal Closes         │
+  │ Cart Clears          │
+  │ Ready for Next Txn   │
+  └──────────────────────┘
+```
+
+---
+
+## 🔄 Component Communication
+
+```
+POSClient (Parent)
+    │
+    ├─ State:
+    │  ├─ session
+    │  ├─ cart
+    │  ├─ selectedCustomer
+    │  └─ isPaymentPanelOpen
+    │
+    ├─ Callbacks:
+    │  ├─ handleOpenPaymentPanel()
+    │  └─ handleConfirmPayment(paymentData)
+    │
+    └─► POSPaymentPanel (Modal Child)
+         │
+         ├─ Receives:
+         │  ├─ orderTotal, orderSubtotal, orderTax
+         │  ├─ customers[]
+         │  ├─ selectedCustomer
+         │  ├─ onConfirmPayment (callback)
+         │  └─ onClose (callback)
+         │
+         ├─ State:
+         │  ├─ paymentMethod
+         │  ├─ paidAmount
+         │  ├─ selectedCustomerId
+         │  └─ validationError
+         │
+         ├─► OrderSummary
+         │   ├─ Receives: subtotal, tax, discount, total
+         │   └─ Displays: Read-only order
+         │
+         ├─► PaymentMethodSelector
+         │   ├─ Receives: selectedMethod, onSelectMethod
+         │   └─ Emits: paymentMethod selection
+         │
+         ├─► CustomerSelector
+         │   ├─ Receives: customers[], selectedCustomer
+         │   ├─ Emits: customer selection
+         │   └─ Visible when: paymentMethod === 'CREDIT'
+         │
+         ├─► NumericKeypad
+         │   ├─ Receives: value, onValueChange
+         │   ├─ Emits: paidAmount updates
+         │   └─ Supports: Keyboard input
+         │
+         └─ On Confirm:
+            ├─ Validate payment
+            ├─ Call onConfirmPayment(paymentData)
+            └─ Close modal on success
+```
+
+---
+
+## 📊 Data Flow Diagram
+
+```
+START
+  │
+  ▼
+┌─────────────────────────────┐
+│ User at POS Page            │
+│ - Session is open           │
+│ - Products in cart          │
+└──────┬──────────────────────┘
+       │
+       ▼
+┌─────────────────────────────┐
+│ Click "Process Payment"      │
+│ Button                       │
+└──────┬──────────────────────┘
+       │
+       ▼
+┌─────────────────────────────┐
+│ validate:                    │
+│ - Session exists? ✓          │
+│ - Cart not empty? ✓          │
+│ - Open modal                 │
+└──────┬──────────────────────┘
+       │
+       ▼
+┌─────────────────────────────┐
+│ Modal Opens                  │
+│ - Shows order total          │
+│ - Shows payment methods      │
+│ - CASH selected by default   │
+└──────┬──────────────────────┘
+       │
+       ├─────────────────────────────────────┐
+       │                                     │
+       ▼                                     ▼
+   If CASH               If CREDIT / OTHER
+   │                     │
+   ▼                     ▼
+Enter amount      Select customer
+   │                     │
+   ▼                     ▼
+Change calc'd     Validate customer
+   │                     │
+   └────────────┬────────┘
+                │
+                ▼
+          ┌─────────────────┐
+          │ All Valid?      │
+          └─────┬───────┬───┘
+                │       │
+              YES      NO
+                │       │
+                ▼       ▼
+            Click OK   Show Error
+                │       │
+                ▼       ▼
+        Confirm Clicked  User fixes
+                │         │
+                ▼         └──→ (loop back)
+        ┌──────────────────┐
+        │ Call API         │
+        │ POST /api/pos/tx │
+        └────────┬─────────┘
+                 │
+        ┌────────┴────────┐
+        │                 │
+       SUCCESS            FAIL
+        │                 │
+        ▼                 ▼
+   ┌────────────┐    ┌──────────┐
+   │ Close modal│    │Show Error│
+   │ Clear cart │    │Try again │
+   │ Show toast │    └────┬─────┘
+   │ Ready next │         │
+   └────────────┘    (loop back)
+        │
+        ▼
+      END
+```
+
+---
+
+## 🎛️ State Management
+
+```
+POSPaymentPanel (Component Local State)
+│
+├─ paymentMethod: ConcretePaymentMethod
+│  └─ Controls: Method buttons, validation rules, display text
+│
+├─ paidAmount: string (formatted as "0.00")
+│  └─ Controls: Keypad input, display, validation
+│
+├─ isConfirming: boolean
+│  └─ Controls: Button disable state, loading spinner
+│
+├─ validationError: string | null
+│  └─ Controls: Error message display
+│
+└─ selectedCustomerId: string | null
+   └─ Controls: Customer dropdown, credit validation
+
+Derived State (Calculated):
+│
+├─ changeAmount = max(0, paidAmount - orderTotal)
+│  └─ Displayed only for CASH
+│
+├─ methodConfig = PAYMENT_METHOD_CONFIG[paymentMethod]
+│  └─ Determines validation rules
+│
+└─ isValid = validatePayment()
+   └─ Controls confirm button enabled state
+```
+
+---
+
+## 🔐 Validation Flow
+
+```
+User clicks Confirm
+       │
+       ▼
+validatePayment()
+{
+    ├─ Is paidAmount > 0?
+    │  ├─ NO  → "Please enter valid amount"
+    │  └─ YES → continue
+    │
+    ├─ For CASH:
+    │  ├─ paidAmount >= total?
+    │  ├─ NO  → "Insufficient amount. Need $X"
+    │  └─ YES → continue
+    │
+    ├─ For CREDIT:
+    │  ├─ Customer selected?
+    │  ├─ NO  → "Select customer for credit"
+    │  ├─ YES → continue
+    │  │
+    │  └─ paidAmount <= total?
+    │     ├─ NO  → "Credit can't exceed total"
+    │     └─ YES → continue
+    │
+    ├─ For CARD/UPI/WALLET:
+    │  ├─ paidAmount >= total?
+    │  ├─ NO  → "Amount must be at least $X"
+    │  └─ YES → continue
+    │
+    └─ Return isValid = true
+           │
+           ▼
+    Enable Confirm Button ✓
+}
+```
+
+---
+
+## 🎨 Component Dependencies
+
+```
+POSPaymentPanel
+├── imports:
+│   ├── Dialog (from ui/dialog)
+│   ├── Button, Card, etc (from ui/*)
+│   ├── formatCurrency (from @/lib/utils)
+│   ├── ConcretePaymentMethod (from types/payment.types)
+│   ├── Customer (from types/customer.types)
+│   ├── PAYMENT_METHOD_CONFIG (from types/pos-payment.types)
+│   ├── NumericKeypad
+│   ├── OrderSummary
+│   ├── PaymentMethodSelector
+│   └── CustomerSelector
+│
+├── NumericKeypad
+│   └── imports: Button, Input, lucide-react
+│
+├── OrderSummary
+│   └── imports: Card, formatCurrency
+│
+├── PaymentMethodSelector
+│   ├── imports: Button, ConcretePaymentMethod, lucide-react
+│   └── uses: METHOD_CONFIG (local)
+│
+└── CustomerSelector
+    └── imports: Button, Input, Customer, lucide-react
+```
+
+---
+
+## 🚀 Deployment Checklist
+
+```
+✅ Code Changes
+   ├─ types/pos-payment.types.ts created
+   ├─ components/pos/numeric-keypad.tsx created
+   ├─ components/pos/order-summary.tsx created
+   ├─ components/pos/payment-method-selector.tsx created
+   ├─ components/pos/customer-selector.tsx created
+   ├─ components/pos/pos-payment-panel.tsx created
+   ├─ components/ui/dialog.tsx created
+   └─ components/pos/pos-client.tsx modified
+
+✅ No Database Changes
+   └─ All existing schemas unchanged
+
+✅ No API Changes
+   └─ Same endpoints, same logic
+
+✅ Type Safety
+   └─ Full TypeScript coverage
+
+✅ Testing
+   └─ Manual testing on POS page
+
+✅ Performance
+   └─ Optimized, no unnecessary renders
+```
+
+---
+
+## 📈 Scalability
+
+The architecture supports:
+
+- ✅ Adding new payment methods (no backend changes)
+- ✅ Multi-currency support (format helpers)
+- ✅ Additional validation rules (pluggable)
+- ✅ Different cash drawer integrations (via API)
+- ✅ Receipt printing (modal extension)
+- ✅ Payment plan splitting (component enhancement)
+
+---
+
+## 🎯 This Architecture Ensures
+
+1. **Separation of Concerns**
+
+   - UI layer (components)
+   - Business logic layer (services)
+   - Data layer (Prisma)
+
+2. **Reusability**
+
+   - Each component is independent
+   - Can be used elsewhere
+
+3. **Maintainability**
+
+   - Clear file organization
+   - Well-documented
+   - Type safe
+
+4. **Testability**
+
+   - Components have clear inputs/outputs
+   - Logic isolated from UI
+   - Easy to mock
+
+5. **Extensibility**
+   - Add payment methods easily
+   - Plugin payment gateways
+   - Extend validation rules
+
+This is production-ready code! 🚀

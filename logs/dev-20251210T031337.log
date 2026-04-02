@@ -1,0 +1,56 @@
+
+> pms-erp-system@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.33
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 5.4s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1927ms (174 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /dashboard/products in 14.3s (1084 modules)
+ GET /dashboard/installHook.js.map 404 in 16144ms
+prisma:error 
+Invalid `prisma.product.findMany()` invocation:
+
+
+The column `products.aiTags` does not exist in the current database.
+Error fetching products: PrismaClientKnownRequestError: 
+Invalid `prisma.product.findMany()` invocation:
+
+
+The column `products.aiTags` does not exist in the current database.
+    at $n.handleRequestError (/home/yanish/StudioProjects/Prompt/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/home/yanish/StudioProjects/Prompt/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/home/yanish/StudioProjects/Prompt/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/home/yanish/StudioProjects/Prompt/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async Promise.all (index 0)
+    at async getProducts (webpack-internal:///(rsc)/./app/dashboard/products/page.tsx:59:35)
+    at async ProductsPage (webpack-internal:///(rsc)/./app/dashboard/products/page.tsx:100:50) {
+  code: 'P2022',
+  clientVersion: '5.22.0',
+  meta: { modelName: 'Product', column: 'products.aiTags' }
+}
+ ⨯ PrismaClientKnownRequestError: 
+Invalid `prisma.product.findMany()` invocation:
+
+
+The column `products.aiTags` does not exist in the current database.
+    at async Promise.all (index 0)
+    at async getProducts (./app/dashboard/products/page.tsx:59:35)
+    at async ProductsPage (./app/dashboard/products/page.tsx:100:50)
+digest: "2383544137"
+ ⨯ PrismaClientKnownRequestError: 
+Invalid `prisma.product.findMany()` invocation:
+
+
+The column `products.aiTags` does not exist in the current database.
+    at async Promise.all (index 0)
+    at async getProducts (./app/dashboard/products/page.tsx:59:35)
+    at async ProductsPage (./app/dashboard/products/page.tsx:100:50)
+digest: "2383544137"
+ GET /dashboard/products 500 in 14956ms
+ GET /dashboard/installHook.js.map 404 in 118ms

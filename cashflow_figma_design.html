@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CashFlow AI - Design System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .design-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Navigation */
+        .design-nav {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .nav-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .nav-tab {
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab:hover, .nav-tab.active {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Design System Section */
+        .design-section {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1e293b;
+        }
+
+        /* Color Palette */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .color-card {
+            text-align: center;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .color-swatch {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .color-info {
+            padding: 15px;
+            background: white;
+        }
+
+        .color-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .color-code {
+            font-family: 'Monaco', monospace;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        /* Typography */
+        .typography-samples {
+            display: grid;
+            gap: 20px;
+        }
+
+        .typography-item {
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        /* Component Library */
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .component-card {
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fafbfc;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 10px 0;
+        }
+
+        .card-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+        }
+
+        /* Dashboard Layout */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            grid-template-rows: 70px 1fr;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .sidebar {
+            background: #1e293b;
+            color: white;
+            padding: 20px 0;
+            grid-row: 1 / 3;
+        }
+
+        .topbar {
+            background: white;
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .main-content {
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .sidebar-logo {
+            padding: 0 20px 30px;
+            border-bottom: 1px solid #334155;
+            margin-bottom: 20px;
+        }
+
+        .sidebar-nav {
+            padding: 0 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #cbd5e1;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: #334155;
+            color: white;
+        }
+
+        .nav-icon {
+            margin-right: 12px;
+            font-size: 18px;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .kpi-title {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .kpi-change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .kpi-positive { color: #10b981; }
+        .kpi-negative { color: #ef4444; }
+
+        /* Charts */
+        .chart-container {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-paid { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-overdue { background: #fee2e2; color: #991b1b; }
+
+        /* AI Insights */
+        .ai-insight {
+            background: linear-gradient(135deg, #667eea10 0%, #764ba220 100%);
+            border: 1px solid #667eea30;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .ai-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 6px;
+            display: inline-block;
+            margin-right: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: 70px auto 1fr;
+            }
+            
+            .sidebar {
+                grid-row: 2 / 3;
+                grid-column: 1 / 2;
+                height: auto;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .screen-container {
+            display: none;
+        }
+
+        .screen-container.active {
+            display: block;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-bar {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            padding-left: 45px;
+            background: white;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+    <div class="design-container">
+        <!-- Navigation Header -->
+        <div class="design-nav">
+            <h1 class="nav-title">CashFlow AI - Design System & Key Screens</h1>
+            <p>Complete Figma-style design foundation for Angular development</p>
+            
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showSection('design-system')">Design System</button>
+                <button class="nav-tab" onclick="showSection('dashboard')">Dashboard</button>
+                <button class="nav-tab" onclick="showSection('sales-orders')">Sales Orders</button>
+                <button class="nav-tab" onclick="showSection('inventory')">Inventory</button>
+                <button class="nav-tab" onclick="showSection('payments')">Payments</button>
+                <button class="nav-tab" onclick="showSection('analytics')">Analytics</button>
+            </div>
+        </div>
+
+        <!-- Design System Section -->
+        <div id="design-system" class="screen-container active">
+            <div class="design-section">
+                <h2 class="section-title">🎨 Color Palette</h2>
+                <div class="color-grid">
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">Primary</div>
+                        <div class="color-info">
+                            <div class="color-name">Primary Brand</div>
+                            <div class="color-code">#667eea → #764ba2</div>
+                        </div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #10b981;">Success</div>
+                        <div class="color-info">
+                            <div class="color-name">Success/Profit</div>
+                            <div class="color-code">#10b981</div>
+                        </div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #f59e0b;">Warning</div>
+                        <div class="color-info">
+                            <div class="color-name">Warning/Pending</div>
+                            <div class="color-code">#f59e0b</div>
+                        </div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #ef4444;">Danger</div>
+                        <div class="color-info">
+                            <div class="color-name">Danger/Loss</div>
+                            <div class="color-code">#ef4444</div>
+                        </div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #1e293b;">Dark</div>
+                        <div class="color-info">
+                            <div class="color-name">Text Primary</div>
+                            <div class="color-code">#1e293b</div>
+                        </div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #64748b;">Gray</div>
+                        <div class="color-info">
+                            <div class="color-name">Text Secondary</div>
+                            <div class="color-code">#64748b</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="design-section">
+                <h2 class="section-title">📝 Typography</h2>
+                <div class="typography-samples">
+                    <div class="typography-item">
+                        <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 10px;">H1 - Page Titles (32px, Bold)</h1>
+                        <p style="color: #64748b;">Used for main page headings like "Dashboard", "Sales Orders"</p>
+                    </div>
+                    <div class="typography-item">
+                        <h2 style="font-size: 24px; font-weight: 600; margin-bottom: 10px;">H2 - Section Headers (24px, Semibold)</h2>
+                        <p style="color: #64748b;">Used for card headers and section divisions</p>
+                    </div>
+                    <div class="typography-item">
+                        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">H3 - Subsections (18px, Semibold)</h3>
+                        <p style="color: #64748b;">Used for form labels and table headers</p>
+                    </div>
+                    <div class="typography-item">
+                        <p style="font-size: 14px; margin-bottom: 10px;">Body Text - Regular (14px, Regular)</p>
+                        <p style="color: #64748b;">Standard text for descriptions and content</p>
+                    </div>
+                    <div class="typography-item">
+                        <small style="font-size: 12px; color: #9ca3af;">Small Text - Secondary (12px, Regular)</small>
+                        <p style="color: #64748b; margin-top: 5px;">Used for timestamps, helper text, and metadata</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="design-section">
+                <h2 class="section-title">🧩 Component Library</h2>
+                <div class="component-grid">
+                    <div class="component-card">
+                        <h3 style="margin-bottom: 15px;">Buttons</h3>
+                        <button class="btn btn-primary">Primary Action</button>
+                        <button class="btn btn-secondary">Secondary</button>
+                        <button class="btn btn-success">Save</button>
+                        <button class="btn btn-danger">Delete</button>
+                    </div>
+                    
+                    <div class="component-card">
+                        <h3 style="margin-bottom: 15px;">Status Badges</h3>
+                        <span class="status-badge status-paid">Paid</span>
+                        <span class="status-badge status-pending">Pending</span>
+                        <span class="status-badge status-overdue">Overdue</span>
+                    </div>
+
+                    <div class="component-card">
+                        <h3 style="margin-bottom: 15px;">KPI Card</h3>
+                        <div class="kpi-card" style="margin: 0;">
+                            <div class="kpi-title">Total Revenue</div>
+                            <div class="kpi-value">$24,580</div>
+                            <div class="kpi-change kpi-positive">↗ +12.5% from last month</div>
+                        </div>
+                    </div>
+
+                    <div class="component-card">
+                        <h3 style="margin-bottom: 15px;">AI Insight</h3>
+                        <div class="ai-insight" style="margin: 0;">
+                            <span class="ai-icon"></span>
+                            <strong>AI Recommendation:</strong> Consider reordering Product A - predicted stockout in 5 days
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard" class="screen-container">
+            <div class="dashboard-layout">
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <div class="sidebar-logo">
+                        <h2 style="color: white; font-weight: 700;">CashFlow AI</h2>
+                    </div>
+                    <nav class="sidebar-nav">
+                        <a href="#" class="nav-item active">
+                            <span class="nav-icon">📊</span>
+                            Dashboard
+                        </a>
+                        <a href="#" class="nav-item">
+                            <span class="nav-icon">💰</span>
+                            Sales Orders
+                        </a>
+                        <a href="#" class="nav-item">
+                            <span class="nav-icon">📦</span>
+                            Inventory
+                        </a>
+                        <a href="#" class="nav-item">
+                            <span class="nav-icon">🛒</span>
+                            Purchase Orders
+                        </a>
+                        <a href="#" class="nav-item">
+                            <span class="nav-icon">💳</span>
+                            Payments
+                        </a>
+                        <a href="#" class="nav-item">
+                            <span class="nav-icon">📈</span>
+                            Analytics
+                        </a>
+                        <a href="#" class="nav-item">
+                            <span class="nav-icon">📄</span>
+                            Reports
+                        </a>
+                        <a href="#" class="nav-item">
+                            <span class="nav-icon">👥</span>
+                            Customers
+                        </a>
+                        <a href="#" class="nav-item">
+                            <span class="nav-icon">🏪</span>
+                            Suppliers
+                        </a>
+                    </nav>
+                </div>
+
+                <!-- Top Bar -->
+                <div class="topbar">
+                    <div class="search-bar" style="width: 400px;">
+                        <input type="text" class="form-input search-input" placeholder="Search transactions, customers, products...">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <button style="background: none; border: none; font-size: 20px; cursor: pointer;">🔔</button>
+                        <div style="width: 40px; height: 40px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">JD</div>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="main-content">
+                    <h1 style="margin-bottom: 30px;">Dashboard</h1>
+                    
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-title">Total Revenue</div>
+                            <div class="kpi-value">$24,580</div>
+                            <div class="kpi-change kpi-positive">↗ +12.5% from last month</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-title">Net Profit</div>
+                            <div class="kpi-value">$8,240</div>
+                            <div class="kpi-change kpi-positive">↗ +8.2% from last month</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-title">Outstanding Payments</div>
+                            <div class="kpi-value">$3,450</div>
+                            <div class="kpi-change kpi-negative">↗ +15.3% from last month</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-title">Inventory Value</div>
+                            <div class="kpi-value">$15,680</div>
+                            <div class="kpi-change kpi-positive">↗ +5.1% from last month</div>
+                        </div>
+                    </div>
+
+                    <!-- AI Insights -->
+                    <div class="ai-insight">
+                        <span class="ai-icon"></span>
+                        <strong>Cash Flow Alert:</strong> Based on current trends, you may experience a cash flow shortage in 18 days. Consider following up on overdue payments or adjusting credit terms.
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px;">
+                        <div class="chart-container">
+                            <h3 style="margin-bottom: 20px;">Cash Flow Forecast (90 Days)</h3>
+                            <div class="chart-placeholder">Interactive Cash Flow Chart</div>
+                        </div>
+                        <div class="chart-container">
+                            <h3 style="margin-bottom: 20px;">Revenue by Category</h3>
+                            <div class="chart-placeholder">Pie Chart</div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Transactions Table -->
+                    <div class="design-section">
+                        <h3 style="margin-bottom: 20px;">Recent Transactions</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>AI Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Aug 29, 2025</td>
+                                    <td>ABC Wholesale Foods</td>
+                                    <td>Cost of Goods</td>
+                                    <td style="color: #ef4444;">-$1,250.00</td>
+                                    <td><span class="status-badge status-paid">Paid</span></td>
+                                    <td>95%</td>
+                                </tr>
+                                <tr>
+                                    <td>Aug 28, 2025</td>
+                                    <td>Customer Sale #1001</td>
+                                    <td>Sales Revenue</td>
+                                    <td style="color: #10b981;">+$340.50</td>
+                                    <td><span class="status-badge status-paid">Paid</span></td>
+                                    <td>98%</td>
+                                </tr>
+                                <tr>
+                                    <td>Aug 28, 2025</td>
+                                    <td>Electricity Bill</td>
+                                    <td>Utilities</td>
+                                    <td style="color: #ef4444;">-$180.00</td>
+                                    <td><span class="status-badge status-pending">Pending</span></td>
+                                    <td>92%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Orders Screen -->
+        <div id="sales-orders" class="screen-container">
+            <div class="design-section">
+                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 30px;">
+                    <h1>Sales Orders</h1>
+                    <button class="btn btn-primary">+ New Sales Order</button>
+                </div>
+
+                <!-- Filter Bar -->
+                <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center;">
+                    <div style="flex: 1;">
+                        <input type="text" class="form-input" placeholder="Search orders...">
+                    </div>
+                    <select class="form-input" style="width: 150px;">
+                        <option>All Status</option>
+                        <option>Draft</option>
+                        <option>Confirmed</option>
+                        <option>Paid</option>
+                    </select>
+                    <select class="form-input" style="width: 150px;">
+                        <option>Last 30 Days</option>
+                        <option>Last 7 Days</option>
+                        <option>Custom Range</option>
+                    </select>
+                </div>
+
+                <!-- AI Upsell Recommendations -->
+                <div class="ai-insight">
+                    <span class="ai-icon"></span>
+                    <strong>AI Recommendation:</strong> Customer "Premium Grocers" frequently orders dairy products. Consider suggesting complementary items like bread or pastries for 23% higher average order value.
+                </div>
+
+                <!-- Sales Orders Table -->
+                <div class="card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th>Items</th>
+                                <th>Total Amount</th>
+                                <th>Balance Due</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>#SO-1001</strong></td>
+                                <td>Premium Grocers Ltd</td>
+                                <td>Aug 29, 2025</td>
+                                <td>5 items</td>
+                                <td>$1,480.50</td>
+                                <td>$0.00</td>
+                                <td><span class="status-badge status-paid">Paid</span></td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">✏️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">🗑️</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>#SO-1002</strong></td>
+                                <td>Corner Store Inc</td>
+                                <td>Aug 28, 2025</td>
+                                <td>8 items</td>
+                                <td>$890.75</td>
+                                <td>$445.38</td>
+                                <td><span class="status-badge status-pending">Partially Paid</span></td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">✏️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">💸</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>#SO-1003</strong></td>
+                                <td>Fresh Market Co</td>
+                                <td>Aug 27, 2025</td>
+                                <td>12 items</td>
+                                <td>$2,340.90</td>
+                                <td>$2,340.90</td>
+                                <td><span class="status-badge status-overdue">Overdue</span></td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">✏️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">📞</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Screen -->
+        <div id="inventory" class="screen-container">
+            <div class="design-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h1>Inventory Management</h1>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary">Import Products</button>
+                        <button class="btn btn-primary">+ Add Product</button>
+                    </div>
+                </div>
+
+                <!-- Inventory Stats -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
+                    <div class="kpi-card">
+                        <div class="kpi-title">Total Products</div>
+                        <div class="kpi-value">1,248</div>
+                        <div class="kpi-change kpi-positive">↗ +15 this week</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Low Stock Items</div>
+                        <div class="kpi-value">23</div>
+                        <div class="kpi-change kpi-negative">🚨 Needs attention</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Inventory Value</div>
+                        <div class="kpi-value">$45,680</div>
+                        <div class="kpi-change kpi-positive">↗ +5.2%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Turnover Rate</div>
+                        <div class="kpi-value">4.2x</div>
+                        <div class="kpi-change kpi-positive">Optimal range</div>
+                    </div>
+                </div>
+
+                <!-- AI Inventory Insights -->
+                <div class="ai-insight" style="margin-bottom: 20px;">
+                    <span class="ai-icon"></span>
+                    <strong>AI Inventory Alert:</strong> "Organic Milk" is predicted to run out in 3 days. Recommended reorder: 48 units. Supplier lead time: 2 days.
+                </div>
+
+                <!-- Filter and Search -->
+                <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px;">
+                    <div class="search-bar">
+                        <input type="text" class="form-input search-input" placeholder="Search products by name, SKU, or barcode...">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <select class="form-input">
+                        <option>All Categories</option>
+                        <option>Dairy Products</option>
+                        <option>Fresh Produce</option>
+                        <option>Beverages</option>
+                    </select>
+                    <select class="form-input">
+                        <option>All Stock Levels</option>
+                        <option>Low Stock</option>
+                        <option>Out of Stock</option>
+                        <option>Overstocked</option>
+                    </select>
+                    <button class="btn btn-secondary">🔄 Refresh</button>
+                </div>
+
+                <!-- Products Table -->
+                <div class="card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Category</th>
+                                <th>Stock Qty</th>
+                                <th>Reorder Level</th>
+                                <th>Cost Price</th>
+                                <th>Selling Price</th>
+                                <th>AI Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div style="width: 40px; height: 40px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center;">🥛</div>
+                                        <div>
+                                            <div style="font-weight: 600;">Organic Milk 1L</div>
+                                            <div style="font-size: 12px; color: #64748b;">Fresh dairy product</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>MILK-ORG-1L</td>
+                                <td>Dairy Products</td>
+                                <td style="color: #ef4444; font-weight: 600;">8 units</td>
+                                <td>15 units</td>
+                                <td>$2.50</td>
+                                <td>$4.99</td>
+                                <td><span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 11px;">🚨 Reorder Now</span></td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">✏️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">🛒</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div style="width: 40px; height: 40px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center;">🍞</div>
+                                        <div>
+                                            <div style="font-weight: 600;">Whole Wheat Bread</div>
+                                            <div style="font-size: 12px; color: #64748b;">Fresh bakery item</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>BREAD-WW-500G</td>
+                                <td>Bakery</td>
+                                <td style="font-weight: 600;">45 units</td>
+                                <td>20 units</td>
+                                <td>$1.20</td>
+                                <td>$2.99</td>
+                                <td><span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 11px;">✅ Optimal</span></td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">✏️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">📊</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments Screen -->
+        <div id="payments" class="screen-container">
+            <div class="design-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h1>Payment Management</h1>
+                    <button class="btn btn-primary">+ Record Payment</button>
+                </div>
+
+                <!-- Payment Summary Cards -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
+                    <div class="kpi-card">
+                        <div class="kpi-title">Total Received (This Month)</div>
+                        <div class="kpi-value">$18,450</div>
+                        <div class="kpi-change kpi-positive">↗ +22.3% vs last month</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Outstanding Receivables</div>
+                        <div class="kpi-value">$5,680</div>
+                        <div class="kpi-change kpi-negative">📅 Avg 18 days overdue</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Payment Methods</div>
+                        <div style="font-size: 14px; color: #64748b; margin-top: 10px;">
+                            <div>💳 Card: 45%</div>
+                            <div>💰 Cash: 30%</div>
+                            <div>🏦 Bank: 25%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Payment Insights -->
+                <div class="ai-insight">
+                    <span class="ai-icon"></span>
+                    <strong>Payment Pattern Analysis:</strong> Customer "Fresh Market Co" has been consistently late by 15+ days. Consider adjusting credit terms or requiring partial upfront payment.
+                </div>
+
+                <!-- Payment Filters -->
+                <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px;">
+                    <div class="search-bar">
+                        <input type="text" class="form-input search-input" placeholder="Search by customer, amount, or reference...">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <select class="form-input">
+                        <option>All Payment Methods</option>
+                        <option>Cash</option>
+                        <option>Bank Transfer</option>
+                        <option>Card</option>
+                        <option>UPI</option>
+                    </select>
+                    <select class="form-input">
+                        <option>Last 30 Days</option>
+                        <option>Last 7 Days</option>
+                        <option>Custom Range</option>
+                    </select>
+                    <select class="form-input">
+                        <option>All Payments</option>
+                        <option>Customer Payments</option>
+                        <option>Supplier Payments</option>
+                    </select>
+                </div>
+
+                <!-- Payments Table -->
+                <div class="card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>From/To</th>
+                                <th>Reference Order</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Type</th>
+                                <th>AI Insights</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Aug 29, 2025</td>
+                                <td>
+                                    <div>
+                                        <div style="font-weight: 600;">Premium Grocers Ltd</div>
+                                        <div style="font-size: 12px; color: #64748b;">Customer Payment</div>
+                                    </div>
+                                </td>
+                                <td>#SO-1001</td>
+                                <td style="color: #10b981; font-weight: 600;">+$1,480.50</td>
+                                <td>Bank Transfer</td>
+                                <td><span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Received</span></td>
+                                <td style="font-size: 12px; color: #64748b;">On-time payer</td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">📄</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Aug 28, 2025</td>
+                                <td>
+                                    <div>
+                                        <div style="font-weight: 600;">ABC Wholesale Foods</div>
+                                        <div style="font-size: 12px; color: #64748b;">Supplier Payment</div>
+                                    </div>
+                                </td>
+                                <td>#PO-2001</td>
+                                <td style="color: #ef4444; font-weight: 600;">-$1,250.00</td>
+                                <td>Card</td>
+                                <td><span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Paid</span></td>
+                                <td style="font-size: 12px; color: #64748b;">Regular supplier</td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">📄</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Screen -->
+        <div id="analytics" class="screen-container">
+            <div class="design-section">
+                <h1 style="margin-bottom: 30px;">AI-Powered Analytics</h1>
+
+                <!-- Financial Health Score -->
+                <div class="card" style="margin-bottom: 30px;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Financial Health Score</span>
+                        <span style="font-size: 32px; font-weight: 700; color: #10b981;">87/100</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+                        <div>
+                            <div style="font-size: 14px; color: #64748b; margin-bottom: 8px;">Cash Flow Stability</div>
+                            <div style="background: #e5e7eb; height: 8px; border-radius: 4px;">
+                                <div style="background: #10b981; height: 100%; width: 85%; border-radius: 4px;"></div>
+                            </div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">85/100 - Excellent</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 14px; color: #64748b; margin-bottom: 8px;">Profit Margins</div>
+                            <div style="background: #e5e7eb; height: 8px; border-radius: 4px;">
+                                <div style="background: #f59e0b; height: 100%; width: 72%; border-radius: 4px;"></div>
+                            </div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">72/100 - Good</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 14px; color: #64748b; margin-bottom: 8px;">Inventory Turnover</div>
+                            <div style="background: #e5e7eb; height: 8px; border-radius: 4px;">
+                                <div style="background: #10b981; height: 100%; width: 90%; border-radius: 4px;"></div>
+                            </div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">90/100 - Excellent</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Grid -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px;">
+                    <div class="chart-container">
+                        <h3 style="margin-bottom: 20px;">Revenue vs Expenses Trend</h3>
+                        <div class="chart-placeholder">Line Chart: Revenue (Green) vs Expenses (Red) over 12 months</div>
+                    </div>
+                    <div class="chart-container">
+                        <h3 style="margin-bottom: 20px;">Top Performing Products</h3>
+                        <div style="height: 300px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f1f5f9;">
+                                <span>Organic Milk 1L</span>
+                                <span style="font-weight: 600; color: #10b981;">$2,340</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f1f5f9;">
+                                <span>Whole Wheat Bread</span>
+                                <span style="font-weight: 600; color: #10b981;">$1,890</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f1f5f9;">
+                                <span>Fresh Apples 1kg</span>
+                                <span style="font-weight: 600; color: #10b981;">$1,560</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f1f5f9;">
+                                <span>Orange Juice 1L</span>
+                                <span style="font-weight: 600; color: #10b981;">$1,200</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Segmentation -->
+                <div class="card">
+                    <h3 style="margin-bottom: 20px;">AI Customer Segmentation</h3>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;">
+                        <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #667eea;">32</div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 5px;">HIGH VALUE</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #10b981;">48</div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 5px;">LOYAL</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #f59e0b;">25</div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 5px;">PRICE SENSITIVE</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #64748b;">18</div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 5px;">OCCASIONAL</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #ef4444;">12</div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 5px;">HIGH CHURN RISK</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Management Screen -->
+        <div id="customers" class="screen-container">
+            <div class="design-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h1>Customer Management</h1>
+                    <button class="btn btn-primary">+ Add Customer</button>
+                </div>
+
+                <!-- Customer Insights -->
+                <div class="ai-insight" style="margin-bottom: 20px;">
+                    <span class="ai-icon"></span>
+                    <strong>Customer Insights:</strong> 3 customers are at high churn risk. Revenue from loyal customers increased by 18% this month.
+                </div>
+
+                <!-- Customer Stats -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
+                    <div class="kpi-card">
+                        <div class="kpi-title">Total Customers</div>
+                        <div class="kpi-value">135</div>
+                        <div class="kpi-change kpi-positive">↗ +8 this month</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">High Value Customers</div>
+                        <div class="kpi-value">32</div>
+                        <div class="kpi-change kpi-positive">💎 Top segment</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Avg Order Value</div>
+                        <div class="kpi-value">$485</div>
+                        <div class="kpi-change kpi-positive">↗ +15.2%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Customer Lifetime Value</div>
+                        <div class="kpi-value">$2,840</div>
+                        <div class="kpi-change kpi-positive">↗ +22.1%</div>
+                    </div>
+                </div>
+
+                <!-- Customer Table -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>Customer List</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <select class="form-input" style="width: 150px;">
+                                <option>All Segments</option>
+                                <option>High Value</option>
+                                <option>Loyal</option>
+                                <option>Price Sensitive</option>
+                                <option>Churn Risk</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>AI Segment</th>
+                                <th>Total Orders</th>
+                                <th>Outstanding Balance</th>
+                                <th>Loyalty Points</th>
+                                <th>Churn Risk</th>
+                                <th>Last Order</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div>
+                                        <div style="font-weight: 600;">Premium Grocers Ltd</div>
+                                        <div style="font-size: 12px; color: #64748b;">premium@grocers.com</div>
+                                    </div>
+                                </td>
+                                <td><span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 11px;">HIGH VALUE</span></td>
+                                <td>24 orders</td>
+                                <td style="color: #10b981; font-weight: 600;">$0.00</td>
+                                <td>2,340 pts</td>
+                                <td><span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Low (15%)</span></td>
+                                <td>Aug 29, 2025</td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">✏️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">📞</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div>
+                                        <div style="font-weight: 600;">Fresh Market Co</div>
+                                        <div style="font-size: 12px; color: #64748b;">orders@freshmarket.com</div>
+                                    </div>
+                                </td>
+                                <td><span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 11px;">CHURN RISK</span></td>
+                                <td>18 orders</td>
+                                <td style="color: #ef4444; font-weight: 600;">$2,340.90</td>
+                                <td>890 pts</td>
+                                <td><span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 11px;">High (78%)</span></td>
+                                <td>Aug 27, 2025</td>
+                                <td>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">👁️</button>
+                                    <button style="background: none; border: none; margin: 0 5px; cursor: pointer;">✏️
+
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.screen-container').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Update active tab
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate KPI cards on load
+            const kpiCards = document.querySelectorAll('.kpi-card');
+            kpiCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>
