@@ -3,7 +3,6 @@
 
 'use client';
 
-import { ControllerRenderProps } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
