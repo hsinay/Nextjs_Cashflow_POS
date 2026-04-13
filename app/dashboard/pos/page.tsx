@@ -17,14 +17,28 @@ export default async function POSPage() {
     const cashierId = session.user.id;
     const initialSession = await getLatestOpenPOSSessionByCashierId(cashierId);
 
-    // Fetch all active products and customers for the POS interface
-    const [products, customers] = await Promise.all([
-        prisma.product.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
+    // Fetch all active products with category relation and customers
+    // Note: Categories are extracted from products, avoiding N+1 query
+    const [productsRaw, customers] = await Promise.all([
+        prisma.product.findMany({
+          where: { isActive: true },
+          include: { category: true },
+          orderBy: { name: 'asc' }
+        }),
         prisma.customer.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
     ]);
 
+    // Extract unique categories from products to avoid separate query
+    const categoryMap = new Map();
+    productsRaw.forEach(product => {
+      if (product.category && !categoryMap.has(product.category.id)) {
+        categoryMap.set(product.category.id, product.category);
+      }
+    });
+    const categories = Array.from(categoryMap.values());
+
     // Convert Prisma Decimal to number for client-side usage
-    const serializedProducts = products.map(p => ({
+    const serializedProducts = productsRaw.map(p => ({
       ...p,
       price: p.price.toNumber(),
       costPrice: p.costPrice?.toNumber() || null,
@@ -42,6 +56,7 @@ export default async function POSPage() {
             <POSClient
                 initialSession={initialSession}
                 products={serializedProducts}
+                categories={categories}
                 customers={customers}
                 cashierId={cashierId}
             />

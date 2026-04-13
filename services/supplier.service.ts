@@ -5,6 +5,10 @@ import { createSupplierSchema, updateSupplierSchema } from '@/lib/validations/su
 import { CreateSupplierInput, SupplierFilters, UpdateSupplierInput } from '@/types/supplier.types';
 
 export const SupplierService = {
+  /**
+   * Get all suppliers (balance included only when filtering by creditIssues)
+   * This is a conditional optimization - benefits from lightweight query when filters not used
+   */
   async getAllSuppliers(filters: SupplierFilters) {
     const { search, creditIssues, isActive = true, page = 1, limit = 20 } = filters;
     const where: any = { isActive };
@@ -18,6 +22,26 @@ export const SupplierService = {
     }
     
     const skip = (page - 1) * limit;
+    
+    // If no balance-dependent filters, use lightweight query
+    if (!creditIssues) {
+      const [suppliers, total] = await Promise.all([
+        prisma.supplier.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.supplier.count({ where }),
+      ]);
+      
+      return {
+        suppliers: suppliers.map(s => ({ ...s, creditLimit: Number(s.creditLimit) })),
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      };
+    }
+    
+    // Otherwise, fetch with balance for filtering
     const suppliers = await prisma.supplier.findMany({
       where,
       orderBy: { createdAt: 'desc' },

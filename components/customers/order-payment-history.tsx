@@ -4,14 +4,15 @@
 
 import { Button } from '@/components/ui/button';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/utils';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -63,17 +64,7 @@ export function OrderPaymentHistory({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    } catch {
-      return 'Invalid Date';
-    }
-  };
+
 
   const formatPaymentMethod = (method: string) => {
     return method

@@ -1,12 +1,10 @@
-// app/(dashboard)/sales-orders/page.tsx
+// app/dashboard/sales-orders/page.tsx
 
 import { SalesOrderListClient } from '@/components/sales-orders/sales-order-list-client';
 import { Button } from '@/components/ui/button';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { CustomerService } from '@/services/customer.service'; // Add this line
 import { getAllSalesOrders } from '@/services/sales-order.service';
-import { CustomerSegment } from '@/types/customer.types'; // Add this line
 import { Plus } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import Link from 'next/link';
@@ -38,18 +36,13 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
   }
 
   const { orders, pagination } = await getAllSalesOrders(filters);
-  const customers = await prisma.customer.findMany({ where: { isActive: true }, orderBy: { name: 'asc' }});
-
-  // Add outstandingBalance and convert creditLimit, aiSegment, churnRiskScore to each customer
-  const customersWithBalance = await Promise.all(
-    customers.map(async (customer) => ({
-      ...customer,
-      outstandingBalance: await CustomerService.calculateOutstandingBalance(customer.id),
-      creditLimit: customer.creditLimit.toNumber(),
-      aiSegment: customer.aiSegment as CustomerSegment,
-      churnRiskScore: customer.churnRiskScore !== null ? customer.churnRiskScore.toNumber() : null,
-    }))
-  );
+  
+  // Fetch only dropdown data (id and name) - no balance calculations needed
+  const customers = await prisma.customer.findMany({ 
+    where: { isActive: true }, 
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  });
 
   return (
     <div className="space-y-8">
@@ -74,7 +67,7 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
         initialSearch={searchParams.search || ''}
         initialCustomer={searchParams.customer || ''}
         initialStatus={searchParams.status || ''}
-        customers={customersWithBalance}
+        customers={customers as any}
         orders={orders}
         pagination={pagination}
       />

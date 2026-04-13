@@ -54,6 +54,7 @@ import { prisma } from '@/lib/prisma';
 import { PaymentMethod } from '@/types/payment.types';
 import { CreateTransactionInput } from '@/types/pos.types';
 import { Prisma } from '@prisma/client';
+import { createPaymentFromTransaction } from './payment.service';
 
 // ============================================================================
 // Type Definitions
@@ -96,6 +97,42 @@ function convertToNumber(value: any): number {
 
 function toDecimal(value: any): Prisma.Decimal {
   return new Prisma.Decimal(convertToNumber(value));
+}
+
+function getSalesOrderFinancialState(
+  totalAmount: Prisma.Decimal,
+  paidAmount: Prisma.Decimal
+): {
+  paidAmount: Prisma.Decimal;
+  balanceAmount: Prisma.Decimal;
+  paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+  status: 'CONFIRMED' | 'PARTIALLY_PAID' | 'PAID';
+} {
+  const normalizedPaidAmount = paidAmount.lessThan(0)
+    ? toDecimal(0)
+    : paidAmount.greaterThan(totalAmount)
+      ? totalAmount
+      : paidAmount;
+  const balanceAmount = totalAmount.minus(normalizedPaidAmount);
+  const paymentStatus =
+    normalizedPaidAmount.lessThanOrEqualTo(0)
+      ? 'UNPAID'
+      : balanceAmount.lessThanOrEqualTo(0)
+        ? 'PAID'
+        : 'PARTIALLY_PAID';
+  const status =
+    paymentStatus === 'PAID'
+      ? 'PAID'
+      : paymentStatus === 'PARTIALLY_PAID'
+        ? 'PARTIALLY_PAID'
+        : 'CONFIRMED';
+
+  return {
+    paidAmount: normalizedPaidAmount,
+    balanceAmount: balanceAmount.lessThan(0) ? toDecimal(0) : balanceAmount,
+    paymentStatus,
+    status,
+  };
 }
 
 // ============================================================================
@@ -302,16 +339,43 @@ export async function processIntegratedPOSTransaction(
       // ========================================================================
 
       let pointsEarned = 0;
+      const creditPortion = paymentDetails
+        .filter((pd) => pd.paymentMethod === 'CREDIT')
+        .reduce((sum, pd) => sum.plus(toDecimal(pd.amount)), toDecimal(0));
+      const collectedAmount = totalAmount.minus(creditPortion);
+      const normalizedCollectedAmount = collectedAmount.lessThan(0)
+        ? toDecimal(0)
+        : collectedAmount;
+
       if (customerId && customer) {
         // Calculate loyalty points
         pointsEarned = Math.floor(convertToNumber(totalAmount) * loyaltyPointsRate);
 
-        // Update customer: loyalty points + outstanding balance
+        if (creditPortion.gt(0)) {
+          const existingOutstanding = await tx.salesOrder.aggregate({
+            where: {
+              customerId,
+              status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
+            },
+            _sum: {
+              balanceAmount: true,
+            },
+          });
+
+          const currentOutstandingBalance =
+            existingOutstanding._sum.balanceAmount ?? toDecimal(0);
+          const nextOutstandingBalance =
+            currentOutstandingBalance.plus(creditPortion);
+
+          if (nextOutstandingBalance.greaterThan(customer.creditLimit)) {
+            throw new Error('Credit limit exceeded');
+          }
+        }
+
         await tx.customer.update({
           where: { id: customerId },
           data: {
             loyaltyPoints: { increment: pointsEarned },
-            outstandingBalance: { increment: totalAmount }, // Will be decremented on payment
           },
         });
       }
@@ -406,6 +470,49 @@ export async function processIntegratedPOSTransaction(
         },
       });
 
+      if (customerId) {
+        const salesOrder = await tx.salesOrder.create({
+          data: {
+            customerId,
+            orderDate: transaction.createdAt,
+            totalAmount,
+            ...getSalesOrderFinancialState(totalAmount, normalizedCollectedAmount),
+            items: {
+              create: transactionItems.map((ti) => ({
+                productId: ti.productId,
+                quantity: ti.quantity,
+                unitPrice: ti.unitPrice,
+                subtotal: ti.totalPrice,
+                taxAmount: ti.taxAmount,
+                discount: ti.discountApplied,
+              })),
+            },
+          },
+        });
+
+        const immediatePaymentDetails = paymentDetails.filter(
+          (pd) => pd.paymentMethod !== 'CREDIT' && toDecimal(pd.amount).gt(0)
+        );
+
+        if (immediatePaymentDetails.length > 0) {
+          await Promise.all(
+            immediatePaymentDetails.map((pd) =>
+              createPaymentFromTransaction(
+                transaction.id,
+                customerId,
+                Number(pd.amount),
+                pd.paymentMethod,
+                tx,
+                salesOrder.id,
+                transaction.createdAt,
+                pd.referenceNumber,
+                pd.notes ?? `Captured during integrated POS sale ${transaction.transactionNumber}`
+              )
+            )
+          );
+        }
+      }
+
       // ========================================================================
       // STEP 8: UPDATE POS SESSION TOTALS
       // ========================================================================
@@ -453,7 +560,7 @@ export async function processIntegratedPOSTransaction(
         paymentMethods: paymentDetails.map((pd) => pd.paymentMethod),
         inventoryEntriesCreated: items.length,
         ledgerEntriesCreated: 3 + (totalCOGS.gt(0) ? 1 : 0) + (totalDiscountAmount.gt(0) ? 1 : 0),
-        customerBalanceUpdated: !!customerId,
+        customerBalanceUpdated: !!customerId && creditPortion.gt(0),
       };
     },
     {
@@ -477,6 +584,13 @@ export function validatePOSIntegrationInput(input: POSIntegrationInput): string[
   if (!input.items?.length) errors.push('Items array is required');
   if (!input.paymentDetails?.length)
     errors.push('Payment details are required');
+
+  const hasCreditPayment = input.paymentDetails?.some(
+    (pd) => pd.paymentMethod === 'CREDIT' && pd.amount > 0
+  );
+  if (hasCreditPayment && !input.customerId) {
+    errors.push('Customer is required for credit POS transactions');
+  }
 
   // Validate payment total matches transaction total
   const paymentTotal = input.paymentDetails.reduce(

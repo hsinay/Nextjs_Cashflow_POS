@@ -24,6 +24,30 @@ function convertToNumber(value: unknown): unknown {
   return value;
 }
 
+function getSalesOrderFinancialState(totalAmount: Prisma.Decimal, paidAmount: Prisma.Decimal) {
+  const normalizedPaidAmount = paidAmount.greaterThan(totalAmount) ? totalAmount : paidAmount;
+  const balanceAmount = totalAmount.minus(normalizedPaidAmount);
+  const paymentStatus =
+    normalizedPaidAmount.lessThanOrEqualTo(0)
+      ? 'UNPAID'
+      : balanceAmount.lessThanOrEqualTo(0)
+        ? 'PAID'
+        : 'PARTIALLY_PAID';
+  const status =
+    paymentStatus === 'PAID'
+      ? 'PAID'
+      : paymentStatus === 'PARTIALLY_PAID'
+        ? 'PARTIALLY_PAID'
+        : 'CONFIRMED';
+
+  return {
+    paidAmount: normalizedPaidAmount,
+    balanceAmount,
+    paymentStatus,
+    status,
+  };
+}
+
 
 /**
  * Get all sales orders with filtering, searching, and pagination
@@ -153,6 +177,8 @@ export async function createSalesOrder(data: CreateSalesOrderInput): Promise<Sal
       orderDate: orderDate || new Date(),
       status: status || 'DRAFT',
       totalAmount: totalAmount,
+      paidAmount: new Prisma.Decimal(0),
+      paymentStatus: 'UNPAID',
       balanceAmount: totalAmount, // Initially, balance is the total amount
       items: {
         create: orderItemsData,
@@ -340,7 +366,7 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
             data: {
                 ...orderData,
                 totalAmount,
-                balanceAmount: totalAmount, // TODO: Adjust balance based on payments
+                ...getSalesOrderFinancialState(totalAmount, existingOrder.paidAmount),
             },
         }));
 

@@ -4,10 +4,8 @@ import { PaymentListClient } from '@/components/payments/payment-list-client';
 import { Button } from '@/components/ui/button';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { CustomerService } from '@/services/customer.service'; // Add this line
 import { getAllPayments } from '@/services/payment.service';
-import { CustomerSegment } from '@/types/customer.types';
-import { ConcretePaymentMethod, PayerType } from '@/types/payment.types'; // Add this line
+import { ConcretePaymentMethod, PayerType } from '@/types/payment.types';
 import { Plus } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import Link from 'next/link';
@@ -45,24 +43,20 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
   }
 
   const { payments, pagination } = await getAllPayments(filters);
-  const customers = await prisma.customer.findMany({ where: { isActive: true }, orderBy: { name: 'asc' }});
-  // Add outstandingBalance and convert creditLimit to each customer
-  const customersWithBalance = await Promise.all(
-    customers.map(async (customer) => ({
-      ...customer,
-      outstandingBalance: await CustomerService.calculateOutstandingBalance(customer.id),
-      creditLimit: customer.creditLimit.toNumber(),
-      aiSegment: customer.aiSegment as CustomerSegment,
-      churnRiskScore: customer.churnRiskScore !== null ? customer.churnRiskScore.toNumber() : null,
-    }))
-  );
-  const suppliers = await prisma.supplier.findMany({ where: { isActive: true }, orderBy: { name: 'asc' }});
-  // Convert creditLimit and outstandingBalance to number for each supplier
-  const suppliersWithConvertedCreditLimit = suppliers.map(supplier => ({
-    ...supplier,
-    creditLimit: supplier.creditLimit.toNumber(),
-    outstandingBalance: supplier.outstandingBalance.toNumber(),
-  }));
+  
+  // Fetch only dropdown data (id and name) - no balance calculations needed
+  const [customers, suppliers] = await Promise.all([
+    prisma.customer.findMany({ 
+      where: { isActive: true }, 
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    }),
+    prisma.supplier.findMany({ 
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    }),
+  ]);
 
 
   return (
@@ -89,8 +83,8 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
         initialPaymentMethod={searchParams.paymentMethod || ''}
         initialStartDate={searchParams.startDate || ''}
         initialEndDate={searchParams.endDate || ''}
-        customers={customersWithBalance}
-        suppliers={suppliersWithConvertedCreditLimit}
+        customers={customers as any}
+        suppliers={suppliers as any}
         payments={payments}
         pagination={pagination}
       />

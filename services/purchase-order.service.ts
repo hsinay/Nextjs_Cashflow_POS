@@ -18,6 +18,38 @@ function convertToNumber(value: unknown): unknown {
   return value;
 }
 
+function getPurchaseOrderFinancialState(totalAmount: Prisma.Decimal, paidAmount: Prisma.Decimal) {
+  const normalizedPaidAmount = paidAmount.lessThan(0) ? new Prisma.Decimal(0) : paidAmount;
+  const balanceAmount = totalAmount.minus(normalizedPaidAmount);
+  const normalizedBalanceAmount = balanceAmount.lessThan(0) ? new Prisma.Decimal(0) : balanceAmount;
+  const paymentStatus =
+    normalizedPaidAmount.lessThanOrEqualTo(0)
+      ? 'PENDING'
+      : normalizedBalanceAmount.lessThanOrEqualTo(0)
+        ? (normalizedPaidAmount.greaterThan(totalAmount) ? 'OVERPAID' : 'FULLY_PAID')
+        : 'PARTIALLY_PAID';
+
+  return {
+    paidAmount: normalizedPaidAmount,
+    balanceAmount: normalizedBalanceAmount,
+    paymentStatus,
+  };
+}
+
+async function getPurchaseOrderAllocatedAmount(tx: any, purchaseOrderId: string) {
+  const allocations = await tx.orderPaymentAllocation.findMany({
+    where: {
+      orderType: 'PURCHASE_ORDER',
+      purchaseOrderId,
+    },
+  });
+
+  return allocations.reduce(
+    (sum: Prisma.Decimal, allocation: any) => sum.plus(allocation.allocatedAmount),
+    new Prisma.Decimal(0)
+  );
+}
+
 export async function getAllPurchaseOrders(filters: PurchaseOrderFilters): Promise<PaginatedPurchaseOrders> {
   const { page = 1, limit = 20 } = filters;
   const skip = (page - 1) * limit;
@@ -130,6 +162,8 @@ export async function createPurchaseOrder(data: CreatePurchaseOrderInput): Promi
       orderDate: orderDate || new Date(),
       status: status || 'DRAFT',
       totalAmount: totalAmount,
+      paidAmount: new Prisma.Decimal(0),
+      paymentStatus: 'PENDING',
       balanceAmount: totalAmount,
       items: {
         create: orderItemsData,
@@ -287,7 +321,7 @@ export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderI
           data: {
               ...orderData,
               totalAmount,
-              balanceAmount: totalAmount, // TODO: Adjust balance based on payments
+              ...getPurchaseOrderFinancialState(totalAmount, existingOrder.paidAmount),
           },
       });
 
@@ -373,16 +407,23 @@ export function calculateBalance(totalAmount: number, paidAmount: number): numbe
  * Get all payments linked to a purchase order
  */
 export async function getPurchaseOrderPayments(purchaseOrderId: string) {
-  const payments = await prisma.payment.findMany({
-    where: { referenceOrderId: purchaseOrderId },
-    orderBy: { paymentDate: 'desc' },
+  const allocations = await (prisma as any).orderPaymentAllocation.findMany({
+    where: {
+      orderType: 'PURCHASE_ORDER',
+      purchaseOrderId,
+    },
+    include: {
+      payment: true,
+    },
+    orderBy: { createdAt: 'desc' },
   });
 
-  return payments.map(p => ({
-    ...p,
-    amount: convertToNumber(p.amount),
-    transactionFee: convertToNumber(p.transactionFee),
-    netAmount: convertToNumber(p.netAmount),
+  return allocations.map((allocation: any) => ({
+    ...allocation.payment,
+    amount: convertToNumber(allocation.allocatedAmount),
+    allocatedAmount: convertToNumber(allocation.allocatedAmount),
+    transactionFee: convertToNumber(allocation.payment.transactionFee),
+    netAmount: convertToNumber(allocation.payment.netAmount),
   }));
 }
 
@@ -419,6 +460,25 @@ export async function linkPaymentToPurchaseOrder(
       throw new Error('Payment is already linked to this purchase order');
     }
 
+    const existingAllocations = await tx.orderPaymentAllocation.count({
+      where: {
+        paymentId,
+        orderType: 'PURCHASE_ORDER',
+      },
+    });
+
+    if (existingAllocations > 0) {
+      throw new Error('Payment already has purchase-order allocations');
+    }
+
+    if (payment.supplierId !== po.supplierId) {
+      throw new Error('Payment supplier does not match purchase order supplier');
+    }
+
+    if (payment.amount.greaterThan(po.balanceAmount)) {
+      throw new Error('Payment amount exceeds purchase order balance');
+    }
+
     // Update payment to link it to this PO
     await tx.payment.update({
       where: { id: paymentId },
@@ -427,30 +487,21 @@ export async function linkPaymentToPurchaseOrder(
       },
     });
 
-    // Recalculate PO paid amount
-    const linkedPayments = await tx.payment.findMany({
-      where: { referenceOrderId: purchaseOrderId },
+    await tx.orderPaymentAllocation.create({
+      data: {
+        paymentId,
+        orderType: 'PURCHASE_ORDER',
+        purchaseOrderId,
+        allocatedAmount: payment.amount,
+      },
     });
-
-    const paidAmount = linkedPayments.reduce(
-      (sum, p) => sum.plus(p.amount),
-      new Prisma.Decimal(0)
-    );
-
-    const totalAmount = new Prisma.Decimal(convertToNumber(po.totalAmount));
-    const balanceAmount = totalAmount.minus(paidAmount);
-    const paymentStatus = calculatePaymentStatus(
-      convertToNumber(totalAmount),
-      convertToNumber(paidAmount)
-    );
+    const paidAmount = await getPurchaseOrderAllocatedAmount(tx, purchaseOrderId);
 
     // Update PO with new payment status and amounts
     await tx.purchaseOrder.update({
       where: { id: purchaseOrderId },
       data: {
-        paidAmount,
-        balanceAmount: balanceAmount.lessThan(0) ? new Prisma.Decimal(0) : balanceAmount,
-        paymentStatus,
+        ...getPurchaseOrderFinancialState(po.totalAmount, paidAmount),
       },
     });
 
@@ -499,7 +550,15 @@ export async function unlinkPaymentFromPurchaseOrder(
       throw new Error('Payment not found');
     }
 
-    if (payment.referenceOrderId !== purchaseOrderId) {
+    const allocation = await tx.orderPaymentAllocation.findFirst({
+      where: {
+        paymentId,
+        orderType: 'PURCHASE_ORDER',
+        purchaseOrderId,
+      },
+    });
+
+    if (!allocation) {
       throw new Error('Payment is not linked to this purchase order');
     }
 
@@ -511,30 +570,17 @@ export async function unlinkPaymentFromPurchaseOrder(
       },
     });
 
-    // Recalculate PO amounts
-    const linkedPayments = await tx.payment.findMany({
-      where: { referenceOrderId: purchaseOrderId },
+    await tx.orderPaymentAllocation.delete({
+      where: { id: allocation.id },
     });
 
-    const paidAmount = linkedPayments.reduce(
-      (sum, p) => sum.plus(p.amount),
-      new Prisma.Decimal(0)
-    );
-
-    const totalAmount = new Prisma.Decimal(convertToNumber(po.totalAmount));
-    const balanceAmount = totalAmount.minus(paidAmount);
-    const paymentStatus = calculatePaymentStatus(
-      convertToNumber(totalAmount),
-      convertToNumber(paidAmount)
-    );
+    const paidAmount = await getPurchaseOrderAllocatedAmount(tx, purchaseOrderId);
 
     // Update PO
     await tx.purchaseOrder.update({
       where: { id: purchaseOrderId },
       data: {
-        paidAmount,
-        balanceAmount: balanceAmount.lessThan(0) ? new Prisma.Decimal(0) : balanceAmount,
-        paymentStatus,
+        ...getPurchaseOrderFinancialState(po.totalAmount, paidAmount),
       },
     });
 
@@ -566,42 +612,21 @@ export async function updateSupplierBalance(
   const database = tx || prisma;
 
   try {
-    // Get all CONFIRMED purchase orders for this supplier
-    const confirmedPOs = await database.purchaseOrder.findMany({
+    const aggregate = await database.purchaseOrder.aggregate({
       where: {
         supplierId,
-        status: 'CONFIRMED',
+        status: { in: ['CONFIRMED', 'PARTIALLY_RECEIVED'] },
+      },
+      _sum: {
+        balanceAmount: true,
       },
     });
-
-    // Sum total amount of confirmed POs
-    const totalConfirmedAmount = confirmedPOs.reduce(
-      (sum, po) => sum.plus(po.totalAmount),
-      new Prisma.Decimal(0)
-    );
-
-    // Get all payments for this supplier's purchase orders
-    const poIds = confirmedPOs.map(po => po.id);
-    const payments = await database.payment.findMany({
-      where: {
-        referenceOrderId: { in: poIds },
-      },
-    });
-
-    // Sum all payments
-    const totalPaidAmount = payments.reduce(
-      (sum, p) => sum.plus(p.amount),
-      new Prisma.Decimal(0)
-    );
-
-    // Calculate outstanding balance
-    const outstandingBalance = totalConfirmedAmount.minus(totalPaidAmount);
 
     // Update supplier balance
     await database.supplier.update({
       where: { id: supplierId },
       data: {
-        outstandingBalance: outstandingBalance.lessThan(0) ? new Prisma.Decimal(0) : outstandingBalance,
+        outstandingBalance: aggregate._sum.balanceAmount ?? new Prisma.Decimal(0),
       },
     });
   } catch (error) {
@@ -666,12 +691,26 @@ export async function getSupplierBalanceDetails(supplierId: string) {
     }
   }
 
+  const outstandingBalance = await prisma.purchaseOrder.aggregate({
+    where: {
+      supplierId,
+      status: { in: ['CONFIRMED', 'PARTIALLY_RECEIVED'] },
+    },
+    _sum: {
+      balanceAmount: true,
+    },
+  });
+
+  const derivedOutstandingBalance = convertToNumber(
+    outstandingBalance._sum.balanceAmount ?? new Prisma.Decimal(0)
+  ) as number;
+
   return {
     supplierId,
     supplierName: supplier.name,
-    outstandingBalance: convertToNumber(supplier.outstandingBalance),
+    outstandingBalance: derivedOutstandingBalance,
     creditLimit: convertToNumber(supplier.creditLimit),
-    availableCredit: convertToNumber(supplier.creditLimit) - convertToNumber(supplier.outstandingBalance),
+    availableCredit: convertToNumber(supplier.creditLimit) - derivedOutstandingBalance,
     breakdown,
   };
 }

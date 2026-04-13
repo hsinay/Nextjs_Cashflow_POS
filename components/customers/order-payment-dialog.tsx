@@ -3,6 +3,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { CurrencySymbol } from '@/components/ui/currency-symbol';
 import {
     Dialog,
     DialogContent,
@@ -11,13 +12,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { DollarSign } from 'lucide-react';
 import { useState } from 'react';
 import { OrderPaymentForm } from './order-payment-form';
 
 interface OrderPaymentDialogProps {
   orderId: string;
-  customerId: string;
   totalAmount: number;
   paidAmount: number;
   balanceAmount: number;
@@ -28,7 +27,6 @@ interface OrderPaymentDialogProps {
 
 export function OrderPaymentDialog({
   orderId,
-  customerId,
   totalAmount,
   paidAmount,
   balanceAmount,
@@ -54,7 +52,7 @@ export function OrderPaymentDialog({
           size="sm"
           className="gap-2"
         >
-          <DollarSign className="h-4 w-4" />
+          <CurrencySymbol className="h-4 w-4 inline-flex items-center justify-center" />
           {isFullyPaid ? 'Paid' : 'Record Payment'}
         </Button>
       </DialogTrigger>
@@ -67,7 +65,6 @@ export function OrderPaymentDialog({
         </DialogHeader>
         <OrderPaymentForm
           orderId={orderId}
-          customerId={customerId}
           totalAmount={totalAmount}
           paidAmount={paidAmount}
           balanceAmount={balanceAmount}

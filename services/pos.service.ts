@@ -255,6 +255,16 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
         // Both PaymentMethod and TransactionPaymentMethod have same values, convert to raw string
         const firstPaymentMethod = paymentDetails.length > 0 ? String(paymentDetails[0].paymentMethod) : 'CASH';
         const mainPaymentMethodStr = paymentDetails.length > 1 ? 'MIXED' : firstPaymentMethod;
+        const isCreditSale = paymentDetails.some(pd => pd.paymentMethod === 'CREDIT');
+        const upfrontCreditPaymentAmount = isCreditSale
+            ? paymentDetails
+                .filter(pd => pd.paymentMethod === 'CREDIT')
+                .reduce((sum, pd) => sum.plus(new Prisma.Decimal(pd.amount)), new Prisma.Decimal(0))
+            : new Prisma.Decimal(0);
+        const rawRemainingCreditBalance = totalAmount.minus(upfrontCreditPaymentAmount);
+        const remainingCreditBalance = rawRemainingCreditBalance.greaterThan(0)
+            ? rawRemainingCreditBalance
+            : new Prisma.Decimal(0);
 
         const transaction = await (tx as any).transaction.create({
             data: {
@@ -291,23 +301,41 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
         if (customerId) {
             const customer = await tx.customer.findUnique({ where: { id: customerId } });
             if (!customer) throw new NotFoundError('Customer not found for Sales Order creation');
-            
-            const isCreditSale = paymentDetails.some(pd => pd.paymentMethod === 'CREDIT');
 
             if (isCreditSale) {
-                const newOutstandingBalance = customer.outstandingBalance.plus(totalAmount);
+                const existingOutstanding = await tx.salesOrder.aggregate({
+                    where: {
+                        customerId,
+                        status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
+                    },
+                    _sum: {
+                        balanceAmount: true,
+                    },
+                });
+
+                const currentOutstandingBalance = existingOutstanding._sum.balanceAmount ?? new Prisma.Decimal(0);
+                const newOutstandingBalance = currentOutstandingBalance.plus(remainingCreditBalance);
                 if (newOutstandingBalance.greaterThan(customer.creditLimit)) {
                     throw new BadRequestError('Credit limit exceeded');
                 }
-                
+
+                const initialPaymentStatus =
+                    remainingCreditBalance.lessThanOrEqualTo(0)
+                        ? 'PAID'
+                        : upfrontCreditPaymentAmount.greaterThan(0)
+                            ? 'PARTIALLY_PAID'
+                            : 'UNPAID';
+
                 // Create a SalesOrder with CONFIRMED status and balance due
-                await tx.salesOrder.create({
+                const salesOrder = await tx.salesOrder.create({
                     data: {
                         customerId,
                         orderDate: transaction.createdAt,
-                        status: 'CONFIRMED', 
+                        status: remainingCreditBalance.lessThanOrEqualTo(0) ? 'PAID' : 'CONFIRMED',
                         totalAmount,
-                        balanceAmount: totalAmount,
+                        paidAmount: upfrontCreditPaymentAmount,
+                        paymentStatus: initialPaymentStatus,
+                        balanceAmount: remainingCreditBalance,
                         items: {
                             create: transactionItemsData.map(item => ({
                                 productId: item.productId,
@@ -321,8 +349,22 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
                     },
                 });
 
+                if (upfrontCreditPaymentAmount.greaterThan(0)) {
+                    await createPaymentFromTransaction(
+                        transaction.id,
+                        customerId,
+                        convertToNumber(upfrontCreditPaymentAmount),
+                        'CREDIT',
+                        tx,
+                        salesOrder.id,
+                        transaction.createdAt,
+                        undefined,
+                        'Initial payment captured during POS credit sale'
+                    );
+                }
+
             } else {
-                 await tx.salesOrder.create({
+                 const salesOrder = await tx.salesOrder.create({
                     data: {
                         customerId,
                         orderDate: transaction.createdAt,
@@ -341,6 +383,16 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
                         },
                     },
                 });
+
+                await createPaymentFromTransaction(
+                    transaction.id,
+                    customerId,
+                    convertToNumber(totalAmount),
+                    mainPaymentMethodStr,
+                    tx,
+                    salesOrder.id,
+                    transaction.createdAt
+                );
             }
         }
 
@@ -369,8 +421,7 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
         }
 
         // Create Payment record and ledger entries for the transaction, but not for credit sales
-        const isCreditSale = paymentDetails.some(pd => pd.paymentMethod === 'CREDIT');
-        if (!isCreditSale) {
+        if (!isCreditSale && !customerId) {
             try {
                 console.log(`[POS] Creating payment for transaction ${transaction.id}, customerId: ${customerId}, amount: ${convertToNumber(totalAmount)}, method: ${mainPaymentMethodStr}`);
                 await createPaymentFromTransaction(
@@ -610,4 +661,3 @@ export async function getAllTransactions(filters: any): Promise<PaginatedTransac
         },
     };
 }
-

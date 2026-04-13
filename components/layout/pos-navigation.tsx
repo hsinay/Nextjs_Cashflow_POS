@@ -1,11 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { ChevronDown, Clock, History, LayoutDashboard, MonitorPlay } from 'lucide-react';
 import Link from 'next/link';
-import { ChevronDown, MonitorPlay, LayoutDashboard, Clock, History } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export function POSNavigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="relative">
+        <button
+          disabled
+          className="w-full nav-item flex items-center gap-3 py-2.5 px-4 rounded-md transition-colors duration-200 text-slate-300 hover:bg-slate-800 hover:text-slate-100 active:bg-slate-700 active:text-white font-medium text-sm justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <MonitorPlay className="nav-icon h-5 w-5 flex-shrink-0" />
+            <span>POS</span>
+          </div>
+          <ChevronDown className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
 
   const posMenuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard/pos/dashboard' },

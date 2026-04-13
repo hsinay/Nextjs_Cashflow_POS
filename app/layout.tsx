@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import './globals.css';
-import { Providers } from './providers';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Topbar } from '../components/layout/Topbar';
+import './globals.css';
+import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: 'CashFlow AI - ERP System',
@@ -19,7 +19,7 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         <Providers>
           {isDashboardRoute ? (
             <div className="grid grid-cols-[260px_1fr] grid-rows-[70px_1fr] h-screen">

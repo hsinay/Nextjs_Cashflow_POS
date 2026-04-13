@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getCurrencyCode } from '@/lib/currency';
 import {
   CreatePaymentInput,
   CreateReconciliationInput,
@@ -27,6 +28,481 @@ function convertPaymentToNumber(payment: any): Payment {
     transactionFee: convertToNumber(payment.transactionFee),
     netAmount: convertToNumber(payment.netAmount),
   } as Payment;
+}
+
+function getSalesOrderPaymentState(
+  totalAmount: Prisma.Decimal,
+  paidAmount: Prisma.Decimal
+): {
+  paidAmount: Prisma.Decimal;
+  balanceAmount: Prisma.Decimal;
+  paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+  status: 'CONFIRMED' | 'PARTIALLY_PAID' | 'PAID';
+} {
+  const normalizedPaid = paidAmount.lessThan(0) ? new Prisma.Decimal(0) : paidAmount;
+  const balanceAmount = totalAmount.minus(normalizedPaid);
+  const normalizedBalance = balanceAmount.lessThan(0) ? new Prisma.Decimal(0) : balanceAmount;
+  const paymentStatus =
+    normalizedPaid.lessThanOrEqualTo(0)
+      ? 'UNPAID'
+      : normalizedBalance.lessThanOrEqualTo(0)
+        ? 'PAID'
+        : 'PARTIALLY_PAID';
+  const status =
+    paymentStatus === 'PAID'
+      ? 'PAID'
+      : paymentStatus === 'PARTIALLY_PAID'
+        ? 'PARTIALLY_PAID'
+        : 'CONFIRMED';
+
+  return {
+    paidAmount: normalizedPaid,
+    balanceAmount: normalizedBalance,
+    paymentStatus,
+    status,
+  };
+}
+
+function getPurchaseOrderPaymentState(
+  totalAmount: Prisma.Decimal,
+  paidAmount: Prisma.Decimal
+): {
+  paidAmount: Prisma.Decimal;
+  balanceAmount: Prisma.Decimal;
+  paymentStatus: 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID' | 'OVERPAID';
+} {
+  const normalizedPaid = paidAmount.lessThan(0) ? new Prisma.Decimal(0) : paidAmount;
+  const balanceAmount = totalAmount.minus(normalizedPaid);
+  const normalizedBalance = balanceAmount.lessThan(0) ? new Prisma.Decimal(0) : balanceAmount;
+  const paymentStatus =
+    normalizedPaid.lessThanOrEqualTo(0)
+      ? 'PENDING'
+      : normalizedBalance.lessThanOrEqualTo(0)
+        ? (normalizedPaid.greaterThan(totalAmount) ? 'OVERPAID' : 'FULLY_PAID')
+        : 'PARTIALLY_PAID';
+
+  return {
+    paidAmount: normalizedPaid,
+    balanceAmount: normalizedBalance,
+    paymentStatus,
+  };
+}
+
+async function syncSalesOrderPaymentState(tx: Prisma.TransactionClient, orderId: string) {
+  const order = await tx.salesOrder.findUnique({
+    where: { id: orderId },
+  });
+
+  if (!order) {
+    throw new Error('Sales order not found');
+  }
+
+  const allocations = await (tx as any).orderPaymentAllocation.findMany({
+    where: {
+      orderType: 'SALES_ORDER',
+      salesOrderId: orderId,
+    },
+  });
+
+  const paidAmount = allocations.reduce(
+    (sum: Prisma.Decimal, allocation: any) => sum.plus(allocation.allocatedAmount),
+    new Prisma.Decimal(0)
+  );
+  const nextState = getSalesOrderPaymentState(order.totalAmount, paidAmount);
+
+  return tx.salesOrder.update({
+    where: { id: orderId },
+    data: nextState,
+  });
+}
+
+async function syncCustomerOutstandingBalance(tx: Prisma.TransactionClient, customerId: string) {
+  const aggregate = await tx.salesOrder.aggregate({
+    where: {
+      customerId,
+      status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
+    },
+    _sum: {
+      balanceAmount: true,
+    },
+  });
+
+  return tx.customer.update({
+    where: { id: customerId },
+    data: {
+      outstandingBalance: aggregate._sum.balanceAmount ?? new Prisma.Decimal(0),
+    },
+  });
+}
+
+async function syncSupplierOutstandingBalance(tx: Prisma.TransactionClient, supplierId: string) {
+  const aggregate = await tx.purchaseOrder.aggregate({
+    where: {
+      supplierId,
+      status: { in: ['CONFIRMED', 'PARTIALLY_RECEIVED'] },
+    },
+    _sum: {
+      balanceAmount: true,
+    },
+  });
+
+  return tx.supplier.update({
+    where: { id: supplierId },
+    data: {
+      outstandingBalance: aggregate._sum.balanceAmount ?? new Prisma.Decimal(0),
+    },
+  });
+}
+
+async function syncPurchaseOrderPaymentState(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+) {
+  const order = await tx.purchaseOrder.findUnique({
+    where: { id: orderId },
+  });
+
+  if (!order) {
+    throw new Error('Purchase order not found');
+  }
+
+  const allocations = await (tx as any).orderPaymentAllocation.findMany({
+    where: {
+      orderType: 'PURCHASE_ORDER',
+      purchaseOrderId: orderId,
+    },
+  });
+  const paidAmount = allocations.reduce(
+    (sum: Prisma.Decimal, allocation: any) => sum.plus(allocation.allocatedAmount),
+    new Prisma.Decimal(0)
+  );
+  const nextState = getPurchaseOrderPaymentState(order.totalAmount, paidAmount);
+
+  return tx.purchaseOrder.update({
+    where: { id: orderId },
+    data: nextState,
+  });
+}
+
+async function getReservedRefundAmount(
+  tx: Prisma.TransactionClient,
+  paymentId: string,
+  excludeRefundId?: string
+) {
+  const aggregate = await tx.paymentRefund.aggregate({
+    where: {
+      paymentId,
+      status: { in: ['PENDING', 'APPROVED', 'COMPLETED'] },
+      ...(excludeRefundId ? { id: { not: excludeRefundId } } : {}),
+    },
+    _sum: {
+      refundAmount: true,
+    },
+  });
+
+  return aggregate._sum.refundAmount ?? new Prisma.Decimal(0);
+}
+
+async function getSupplierPaymentAllocations(
+  tx: Prisma.TransactionClient,
+  paymentId: string
+) {
+  return (tx as any).orderPaymentAllocation.findMany({
+    where: {
+      paymentId,
+      orderType: 'PURCHASE_ORDER',
+      purchaseOrderId: { not: null },
+    },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  });
+}
+
+async function getCustomerPaymentAllocations(
+  tx: Prisma.TransactionClient,
+  paymentId: string
+) {
+  return (tx as any).orderPaymentAllocation.findMany({
+    where: {
+      paymentId,
+      orderType: 'SALES_ORDER',
+      salesOrderId: { not: null },
+    },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  });
+}
+
+async function reverseCustomerPaymentApplications(
+  tx: Prisma.TransactionClient,
+  payment: any
+) {
+  const allocations = await getCustomerPaymentAllocations(tx, payment.id);
+
+  if (allocations.length === 0) {
+    throw new Error(
+      'Missing payment allocations for customer payment. Run the payment allocation backfill before editing, refunding, or deleting this payment.'
+    );
+  }
+
+  const affectedOrderIds: string[] = Array.from(
+    new Set(
+      allocations
+        .map((allocation: any) => allocation.salesOrderId as string | null | undefined)
+        .filter((orderId: string | null | undefined): orderId is string => Boolean(orderId))
+    )
+  );
+
+  await (tx as any).orderPaymentAllocation.deleteMany({
+    where: {
+      paymentId: payment.id,
+      orderType: 'SALES_ORDER',
+    },
+  });
+
+  for (const orderId of affectedOrderIds) {
+    await syncSalesOrderPaymentState(tx, orderId);
+  }
+
+  if (payment.customerId) {
+    await syncCustomerOutstandingBalance(tx, payment.customerId);
+  }
+
+  return affectedOrderIds;
+}
+
+async function createCustomerAllocation(
+  tx: Prisma.TransactionClient,
+  input: {
+    paymentId: string;
+    salesOrderId: string;
+    allocatedAmount: Prisma.Decimal;
+  }
+) {
+  return (tx as any).orderPaymentAllocation.create({
+    data: {
+      paymentId: input.paymentId,
+      orderType: 'SALES_ORDER',
+      salesOrderId: input.salesOrderId,
+      allocatedAmount: input.allocatedAmount,
+    },
+  });
+}
+
+async function createSupplierAllocation(
+  tx: Prisma.TransactionClient,
+  input: {
+    paymentId: string;
+    purchaseOrderId: string;
+    allocatedAmount: Prisma.Decimal;
+  }
+) {
+  return (tx as any).orderPaymentAllocation.create({
+    data: {
+      paymentId: input.paymentId,
+      orderType: 'PURCHASE_ORDER',
+      purchaseOrderId: input.purchaseOrderId,
+      allocatedAmount: input.allocatedAmount,
+    },
+  });
+}
+
+async function applyCustomerPaymentApplications(
+  tx: Prisma.TransactionClient,
+  input: {
+    paymentId: string;
+    customerId: string;
+    amount: Prisma.Decimal;
+    paymentDate: Date;
+    paymentMethod: any;
+    referenceOrderId?: string | null;
+    referenceNumber?: string | null;
+    notes?: string | null;
+  }
+) {
+  let remainingAmount = input.amount;
+  const affectedOrderIds = new Set<string>();
+
+  if (input.referenceOrderId) {
+    const order = await tx.salesOrder.findUnique({
+      where: { id: input.referenceOrderId },
+    });
+
+    if (!order) throw new Error('Sales order not found');
+    if (order.customerId !== input.customerId) {
+      throw new Error('Payment customer does not match sales order customer');
+    }
+    if (remainingAmount.greaterThan(order.balanceAmount)) {
+      throw new Error('Payment amount exceeds sales order balance');
+    }
+
+    if (remainingAmount.greaterThan(0)) {
+      await createCustomerAllocation(tx, {
+        paymentId: input.paymentId,
+        salesOrderId: input.referenceOrderId,
+        allocatedAmount: remainingAmount,
+      });
+      affectedOrderIds.add(input.referenceOrderId);
+      remainingAmount = new Prisma.Decimal(0);
+    }
+  } else {
+    const unpaidOrders = await tx.salesOrder.findMany({
+      where: {
+        customerId: input.customerId,
+        status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+
+    for (const order of unpaidOrders) {
+      if (remainingAmount.lessThanOrEqualTo(0)) {
+        break;
+      }
+
+      const allocatableAmount = remainingAmount.greaterThan(order.balanceAmount)
+        ? order.balanceAmount
+        : remainingAmount;
+
+      if (allocatableAmount.lessThanOrEqualTo(0)) {
+        continue;
+      }
+
+      await createCustomerAllocation(tx, {
+        paymentId: input.paymentId,
+        salesOrderId: order.id,
+        allocatedAmount: allocatableAmount,
+      });
+
+      affectedOrderIds.add(order.id);
+      remainingAmount = remainingAmount.minus(allocatableAmount);
+    }
+  }
+
+  for (const orderId of affectedOrderIds) {
+    await syncSalesOrderPaymentState(tx, orderId);
+  }
+
+  await syncCustomerOutstandingBalance(tx, input.customerId);
+
+  return {
+    affectedOrderIds: Array.from(affectedOrderIds),
+    unallocatedAmount: remainingAmount,
+  };
+}
+
+async function reverseSupplierPaymentApplications(
+  tx: Prisma.TransactionClient,
+  payment: any
+) {
+  const allocations = await getSupplierPaymentAllocations(tx, payment.id);
+
+  if (allocations.length === 0) {
+    throw new Error(
+      'Missing payment allocations for supplier payment. Run the payment allocation backfill before editing, refunding, or deleting this payment.'
+    );
+  }
+
+  const affectedOrderIds: string[] = Array.from(
+    new Set(
+      allocations
+        .map((allocation: any) => allocation.purchaseOrderId as string | null | undefined)
+        .filter((orderId: string | null | undefined): orderId is string => Boolean(orderId))
+    )
+  );
+
+  await (tx as any).orderPaymentAllocation.deleteMany({
+    where: {
+      paymentId: payment.id,
+      orderType: 'PURCHASE_ORDER',
+    },
+  });
+
+  for (const orderId of affectedOrderIds) {
+    await syncPurchaseOrderPaymentState(tx, orderId);
+  }
+
+  if (payment.supplierId) {
+    await syncSupplierOutstandingBalance(tx, payment.supplierId);
+  }
+
+  return affectedOrderIds;
+}
+
+async function applySupplierPaymentApplications(
+  tx: Prisma.TransactionClient,
+  input: {
+    paymentId: string;
+    supplierId: string;
+    amount: Prisma.Decimal;
+    referenceOrderId?: string | null;
+  }
+) {
+  let remainingAmount = input.amount;
+  const affectedOrderIds = new Set<string>();
+
+  if (input.referenceOrderId) {
+    const order = await tx.purchaseOrder.findUnique({
+      where: { id: input.referenceOrderId },
+    });
+
+    if (!order) throw new Error('Purchase order not found');
+    if (order.supplierId !== input.supplierId) {
+      throw new Error('Payment supplier does not match purchase order supplier');
+    }
+    if (remainingAmount.greaterThan(order.balanceAmount)) {
+      throw new Error('Payment amount exceeds purchase order balance');
+    }
+
+    if (remainingAmount.greaterThan(0)) {
+      await createSupplierAllocation(tx, {
+        paymentId: input.paymentId,
+        purchaseOrderId: input.referenceOrderId,
+        allocatedAmount: remainingAmount,
+      });
+      affectedOrderIds.add(input.referenceOrderId);
+      remainingAmount = new Prisma.Decimal(0);
+    }
+  } else {
+    const unpaidOrders = await tx.purchaseOrder.findMany({
+      where: {
+        supplierId: input.supplierId,
+        status: { in: ['CONFIRMED', 'PARTIALLY_RECEIVED'] },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+
+    for (const order of unpaidOrders) {
+      if (remainingAmount.lessThanOrEqualTo(0)) {
+        break;
+      }
+
+      const allocatableAmount = remainingAmount.greaterThan(order.balanceAmount)
+        ? order.balanceAmount
+        : remainingAmount;
+
+      if (allocatableAmount.lessThanOrEqualTo(0)) {
+        continue;
+      }
+
+      await createSupplierAllocation(tx, {
+        paymentId: input.paymentId,
+        purchaseOrderId: order.id,
+        allocatedAmount: allocatableAmount,
+      });
+
+      affectedOrderIds.add(order.id);
+      remainingAmount = remainingAmount.minus(allocatableAmount);
+    }
+  }
+
+  for (const orderId of affectedOrderIds) {
+    await syncPurchaseOrderPaymentState(tx, orderId);
+  }
+
+  await syncSupplierOutstandingBalance(tx, input.supplierId);
+
+  return {
+    affectedOrderIds: Array.from(affectedOrderIds),
+    unallocatedAmount: remainingAmount,
+  };
 }
 
 export async function getAllPayments(filters: PaymentFilters): Promise<PaginatedPayments> {
@@ -130,111 +606,44 @@ export async function createPayment(data: CreatePaymentInput): Promise<Payment> 
         status,
         transactionFee: new Prisma.Decimal(transactionFee || 0),
         netAmount: new Prisma.Decimal(netAmount),
+        currency: getCurrencyCode(),
       },
     });
 
     // Update SalesOrder/PurchaseOrder balanceAmount
     if (payerType === 'CUSTOMER') {
-        if (referenceOrderId) {
-            // Payment for specific Sales Order
-            await tx.salesOrder.update({
-                where: { id: referenceOrderId },
-                data: {
-                    balanceAmount: { decrement: new Prisma.Decimal(amount) },
-                },
-            });
-        } else {
-            // Apply payment to oldest unpaid sales orders
-            const unpaidOrders = await tx.salesOrder.findMany({
-                where: {
-                    customerId: payerId,
-                    status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
-                },
-                orderBy: { createdAt: 'asc' },
-            });
-
-            let remainingAmount = new Prisma.Decimal(amount);
-            for (const order of unpaidOrders) {
-                if (remainingAmount.lessThanOrEqualTo(0)) break;
-
-                const orderBalance = order.balanceAmount;
-                const paymentForOrder = remainingAmount.greaterThan(orderBalance) ? orderBalance : remainingAmount;
-                const newBalance = orderBalance.minus(paymentForOrder);
-                const newStatus = newBalance.lessThanOrEqualTo(0) ? 'PAID' : 'PARTIALLY_PAID';
-
-                await tx.salesOrder.update({
-                    where: { id: order.id },
-                    data: {
-                        balanceAmount: newBalance,
-                        status: newStatus,
-                    },
-                });
-
-                remainingAmount = remainingAmount.minus(paymentForOrder);
-            }
-        }
-
-        await tx.customer.update({
-            where: { id: payerId },
-            data: { outstandingBalance: { decrement: new Prisma.Decimal(amount) } },
+        await applyCustomerPaymentApplications(tx, {
+          paymentId: payment.id,
+          customerId: payerId,
+          amount: payment.amount,
+          paymentDate: paymentDate || payment.createdAt,
+          paymentMethod,
+          referenceOrderId,
+          referenceNumber,
+          notes,
         });
         await createLedgerEntry({
             entryDate: payment.createdAt,
             description: `Payment received from Customer ${payerId.substring(0,8)} for ${paymentMethod}`,
             debitAccount: paymentMethod === 'CASH' ? 'Cash' : 'Bank',
             creditAccount: 'Accounts Receivable',
-            amount: convertToNumber(payment.amount),
+            amount: Number(payment.amount),
             referenceId: payment.id,
         }, tx);
     } else if (payerType === 'SUPPLIER') {
-        if (referenceOrderId) {
-            // Payment for specific Purchase Order
-            await tx.purchaseOrder.update({
-                where: { id: referenceOrderId },
-                data: {
-                    balanceAmount: { decrement: new Prisma.Decimal(amount) },
-                },
-            });
-        } else {
-            // Apply payment to oldest unpaid purchase orders
-            const unpaidOrders = await tx.purchaseOrder.findMany({
-                where: {
-                    supplierId: payerId,
-                    status: { in: ['CONFIRMED', 'PARTIALLY_RECEIVED'] },
-                },
-                orderBy: { createdAt: 'asc' },
-            });
-
-            let remainingAmount = new Prisma.Decimal(amount);
-            for (const order of unpaidOrders) {
-                if (remainingAmount.lessThanOrEqualTo(0)) break;
-
-                const orderBalance = order.balanceAmount;
-                const paymentForOrder = remainingAmount.greaterThan(orderBalance) ? orderBalance : remainingAmount;
-                const newBalance = orderBalance.minus(paymentForOrder);
-                const newStatus = newBalance.lessThanOrEqualTo(0) ? 'RECEIVED' : 'PARTIALLY_RECEIVED';
-
-                await tx.purchaseOrder.update({
-                    where: { id: order.id },
-                    data: {
-                        balanceAmount: newBalance,
-                        status: newStatus,
-                    },
-                });
-
-                remainingAmount = remainingAmount.minus(paymentForOrder);
-            }
-        }
-        await tx.supplier.update({
-            where: { id: payerId },
-            data: { outstandingBalance: { decrement: new Prisma.Decimal(amount) } },
+        await applySupplierPaymentApplications(tx, {
+          paymentId: payment.id,
+          supplierId: payerId,
+          amount: payment.amount,
+          referenceOrderId,
         });
+        await syncSupplierOutstandingBalance(tx, payerId);
         await createLedgerEntry({
             entryDate: payment.createdAt,
             description: `Payment made to Supplier ${payerId.substring(0,8)} for ${paymentMethod}`,
             debitAccount: 'Accounts Payable',
             creditAccount: paymentMethod === 'CASH' ? 'Cash' : 'Bank',
-            amount: convertToNumber(payment.amount),
+            amount: Number(payment.amount),
             referenceId: payment.id,
         }, tx);
     }
@@ -244,32 +653,116 @@ export async function createPayment(data: CreatePaymentInput): Promise<Payment> 
 }
 
 export async function updatePayment(id: string, data: UpdatePaymentInput): Promise<Payment> {
-  const existingPayment = await prisma.payment.findUnique({ where: { id } });
-  if (!existingPayment) throw new Error('Payment not found');
+  return prisma.$transaction(async (tx) => {
+    const existingPayment = await tx.payment.findUnique({ where: { id } });
+    if (!existingPayment) throw new Error('Payment not found');
 
-  // TODO: This is complex. Updating payment amount or referenceOrderId will require reversing
-  //  previous ledger entries and balance updates, and then applying new ones.
-  //  For now, only simple field updates are supported without financial impact.
+    const nextAmount = data.amount !== undefined ? new Prisma.Decimal(data.amount) : existingPayment.amount;
+    const nextReferenceOrderId =
+      data.referenceOrderId !== undefined ? data.referenceOrderId : existingPayment.referenceOrderId;
+    const nextPaymentMethod = data.paymentMethod ?? existingPayment.paymentMethod;
+    const nextPaymentDate = data.paymentDate ?? existingPayment.paymentDate;
+    const nextReferenceNumber =
+      data.referenceNumber !== undefined ? data.referenceNumber : existingPayment.referenceNumber;
+    const nextNotes = data.notes !== undefined ? data.notes : existingPayment.notes;
 
-  const updatedPayment = await prisma.payment.update({
-    where: { id },
-    data: {
-      paymentDate: data.paymentDate,
-      amount: data.amount ? new Prisma.Decimal(data.amount) : undefined,
-      paymentMethod: data.paymentMethod,
-      referenceOrderId: data.referenceOrderId,
-      referenceNumber: data.referenceNumber,
-      notes: data.notes,
-      status: data.status,
-      isReconciled: data.isReconciled,
-      reconciledBy: data.reconciledBy,
-    },
-    include: {
-      customer: true,
-      supplier: true,
-    },
+    const financialFieldsChanged =
+      data.amount !== undefined ||
+      data.referenceOrderId !== undefined ||
+      data.paymentMethod !== undefined ||
+      data.paymentDate !== undefined ||
+      data.referenceNumber !== undefined;
+
+    if (
+      financialFieldsChanged &&
+      existingPayment.payerType === 'SUPPLIER' &&
+      existingPayment.supplierId
+    ) {
+      const supplierAllocations = await getSupplierPaymentAllocations(tx, existingPayment.id);
+      if (supplierAllocations.length === 0) {
+        throw new Error(
+          'Missing payment allocations for supplier payment. Run the payment allocation backfill before editing this payment.'
+        );
+      }
+    }
+
+    const customerProjectionFieldsChanged =
+      financialFieldsChanged || data.notes !== undefined;
+
+    if (
+      existingPayment.payerType === 'CUSTOMER' &&
+      existingPayment.customerId &&
+      customerProjectionFieldsChanged
+    ) {
+      await reverseCustomerPaymentApplications(tx, existingPayment);
+    }
+    if (
+      existingPayment.payerType === 'SUPPLIER' &&
+      existingPayment.supplierId &&
+      customerProjectionFieldsChanged
+    ) {
+      await reverseSupplierPaymentApplications(tx, existingPayment);
+    }
+
+    const updatedPayment = await tx.payment.update({
+      where: { id },
+      data: {
+        paymentDate: data.paymentDate,
+        amount: data.amount !== undefined ? nextAmount : undefined,
+        paymentMethod: data.paymentMethod,
+        referenceOrderId: data.referenceOrderId,
+        referenceNumber: data.referenceNumber,
+        notes: data.notes,
+        status: data.status,
+        isReconciled: data.isReconciled,
+        reconciledBy: data.reconciledBy,
+        netAmount:
+          data.amount !== undefined
+            ? nextAmount.minus(existingPayment.transactionFee)
+            : undefined,
+      },
+      include: {
+        customer: true,
+        supplier: true,
+      },
+    });
+
+    if (
+      updatedPayment.payerType === 'CUSTOMER' &&
+      updatedPayment.customerId &&
+      customerProjectionFieldsChanged
+    ) {
+      await applyCustomerPaymentApplications(tx, {
+        paymentId: updatedPayment.id,
+        customerId: updatedPayment.customerId,
+        amount: nextAmount,
+        paymentDate: nextPaymentDate,
+        paymentMethod: nextPaymentMethod,
+        referenceOrderId: nextReferenceOrderId,
+        referenceNumber: nextReferenceNumber,
+        notes: nextNotes,
+      });
+    } else if (updatedPayment.payerType === 'CUSTOMER' && updatedPayment.customerId) {
+      await syncCustomerOutstandingBalance(tx, updatedPayment.customerId);
+    }
+
+    if (
+      updatedPayment.payerType === 'SUPPLIER' &&
+      updatedPayment.supplierId &&
+      customerProjectionFieldsChanged
+    ) {
+      await applySupplierPaymentApplications(tx, {
+        paymentId: updatedPayment.id,
+        supplierId: updatedPayment.supplierId,
+        amount: nextAmount,
+        referenceOrderId: nextReferenceOrderId,
+      });
+    } else if (updatedPayment.payerType === 'SUPPLIER') {
+      await syncSupplierOutstandingBalance(tx, updatedPayment.payerId);
+    }
+
+    return convertPaymentToNumber(updatedPayment);
   });
-  return convertPaymentToNumber(updatedPayment);
 }
 
 export async function deletePayment(id: string): Promise<void> {
@@ -278,45 +771,31 @@ export async function deletePayment(id: string): Promise<void> {
     if (!existingPayment) throw new Error('Payment not found');
 
     // Revert SalesOrder/PurchaseOrder balanceAmount
-    if (existingPayment.referenceOrderId) {
-        if (existingPayment.payerType === 'CUSTOMER') { // Payment for Sales Order
-            await tx.salesOrder.update({
-                where: { id: existingPayment.referenceOrderId },
-                data: { balanceAmount: { increment: existingPayment.amount } },
-            });
-        } else if (existingPayment.payerType === 'SUPPLIER') { // Payment for Purchase Order
-            await tx.purchaseOrder.update({
-                where: { id: existingPayment.referenceOrderId },
-                data: { balanceAmount: { increment: existingPayment.amount } },
-            });
-        }
+    if (existingPayment.payerType === 'CUSTOMER' && existingPayment.customerId) {
+        await reverseCustomerPaymentApplications(tx, existingPayment);
+    } else if (existingPayment.payerType === 'SUPPLIER' && existingPayment.supplierId) {
+        await reverseSupplierPaymentApplications(tx, existingPayment);
     }
 
     // Revert Customer/Supplier outstandingBalance
     if (existingPayment.payerType === 'CUSTOMER') {
-        await tx.customer.update({
-            where: { id: existingPayment.payerId },
-            data: { outstandingBalance: { increment: existingPayment.amount } },
-        });
+        await syncCustomerOutstandingBalance(tx, existingPayment.payerId);
         await createLedgerEntry({
             entryDate: new Date(),
             description: `Payment reversal from Customer ${existingPayment.payerId.substring(0,8)}`,
             debitAccount: 'Accounts Receivable',
             creditAccount: existingPayment.paymentMethod === 'CASH' ? 'Cash' : 'Bank',
-            amount: convertToNumber(existingPayment.amount),
+            amount: Number(existingPayment.amount),
             referenceId: existingPayment.id,
         }, tx);
     } else if (existingPayment.payerType === 'SUPPLIER') {
-        await tx.supplier.update({
-            where: { id: existingPayment.payerId },
-            data: { outstandingBalance: { increment: existingPayment.amount } },
-        });
+        await syncSupplierOutstandingBalance(tx, existingPayment.payerId);
         await createLedgerEntry({
             entryDate: new Date(),
             description: `Payment reversal to Supplier ${existingPayment.payerId.substring(0,8)}`,
             debitAccount: existingPayment.paymentMethod === 'CASH' ? 'Cash' : 'Bank',
             creditAccount: 'Accounts Payable',
-            amount: convertToNumber(existingPayment.amount),
+            amount: Number(existingPayment.amount),
             referenceId: existingPayment.id,
         }, tx);
     }
@@ -335,9 +814,13 @@ export async function createRefund(data: CreateRefundInput): Promise<PaymentRefu
     const payment = await tx.payment.findUnique({ where: { id: data.paymentId } });
     if (!payment) throw new Error('Payment not found');
 
-    // Validate refund amount doesn't exceed original payment
-    if (new Prisma.Decimal(data.refundAmount) > payment.amount) {
-      throw new Error('Refund amount cannot exceed original payment amount');
+    const requestedRefundAmount = new Prisma.Decimal(data.refundAmount);
+    const reservedRefundAmount = await getReservedRefundAmount(tx, data.paymentId);
+    const availableRefundAmount = payment.amount.minus(reservedRefundAmount);
+
+    // Validate refund amount doesn't exceed remaining refundable payment
+    if (requestedRefundAmount.greaterThan(availableRefundAmount)) {
+      throw new Error('Refund amount cannot exceed the remaining refundable payment amount');
     }
 
     // Create refund record
@@ -346,7 +829,7 @@ export async function createRefund(data: CreateRefundInput): Promise<PaymentRefu
         paymentId: data.paymentId,
         transactionId: data.transactionId,
         originalAmount: payment.amount,
-        refundAmount: new Prisma.Decimal(data.refundAmount),
+        refundAmount: requestedRefundAmount,
         reason: data.reason,
         refundMethod: data.refundMethod || 'ORIGINAL_PAYMENT',
         status: 'PENDING',
@@ -391,6 +874,22 @@ export async function processRefund(refundId: string, processedBy: string, notes
     const payment = await tx.payment.findUnique({ where: { id: refund.paymentId } });
     if (!payment) throw new Error('Payment not found');
 
+    const reservedRefundAmount = await getReservedRefundAmount(tx, payment.id, refund.id);
+    const availableRefundAmount = payment.amount.minus(reservedRefundAmount);
+    if (refund.refundAmount.greaterThan(availableRefundAmount)) {
+      throw new Error('Refund amount exceeds the remaining refundable payment amount');
+    }
+
+    const nextPaymentAmount = payment.amount.minus(refund.refundAmount);
+    if (nextPaymentAmount.lessThan(0)) {
+      throw new Error('Refund amount cannot reduce payment below zero');
+    }
+
+    const nextNetAmount = payment.netAmount.minus(refund.refundAmount);
+    const normalizedNetAmount = nextNetAmount.lessThan(0)
+      ? new Prisma.Decimal(0)
+      : nextNetAmount;
+
     // Update refund status
     const updatedRefund = await tx.paymentRefund.update({
       where: { id: refundId },
@@ -402,28 +901,62 @@ export async function processRefund(refundId: string, processedBy: string, notes
       },
     });
 
+    if (payment.payerType === 'CUSTOMER' && payment.customerId) {
+      await reverseCustomerPaymentApplications(tx, payment);
+    }
+    if (payment.payerType === 'SUPPLIER' && payment.supplierId) {
+      await reverseSupplierPaymentApplications(tx, payment);
+    }
+
+    const updatedPayment = await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        amount: nextPaymentAmount,
+        netAmount: normalizedNetAmount,
+        notes: payment.notes
+          ? `${payment.notes}\nRefunded ${convertToNumber(refund.refundAmount)} on ${new Date().toISOString()}`
+          : `Refunded ${convertToNumber(refund.refundAmount)} on ${new Date().toISOString()}`,
+      },
+    });
+
+    if (payment.payerType === 'CUSTOMER' && payment.customerId) {
+      if (updatedPayment.amount.greaterThan(0)) {
+        await applyCustomerPaymentApplications(tx, {
+          paymentId: payment.id,
+          customerId: payment.customerId,
+          amount: updatedPayment.amount,
+          paymentDate: updatedPayment.paymentDate,
+          paymentMethod: updatedPayment.paymentMethod,
+          referenceOrderId: updatedPayment.referenceOrderId,
+          referenceNumber: updatedPayment.referenceNumber,
+          notes: updatedPayment.notes,
+        });
+      } else {
+        await syncCustomerOutstandingBalance(tx, payment.customerId);
+      }
+    }
+
+    if (payment.payerType === 'SUPPLIER') {
+      if (updatedPayment.amount.greaterThan(0) && updatedPayment.supplierId) {
+        await applySupplierPaymentApplications(tx, {
+          paymentId: updatedPayment.id,
+          supplierId: updatedPayment.supplierId,
+          amount: updatedPayment.amount,
+          referenceOrderId: updatedPayment.referenceOrderId,
+        });
+      }
+      await syncSupplierOutstandingBalance(tx, payment.payerId);
+    }
+
     // Create ledger entry for refund
     await createLedgerEntry({
       entryDate: new Date(),
       description: `Refund processed for Payment ${payment.id.substring(0, 8)} - ${refund.reason}`,
       debitAccount: 'Refunds Expense',
       creditAccount: payment.paymentMethod === 'CASH' ? 'Cash' : 'Bank',
-      amount: convertToNumber(refund.refundAmount),
+      amount: Number(refund.refundAmount),
       referenceId: refund.id,
     }, tx);
-
-    // Update customer/supplier outstanding balance if applicable
-    if (payment.payerType === 'CUSTOMER') {
-      await tx.customer.update({
-        where: { id: payment.payerId },
-        data: { outstandingBalance: { increment: new Prisma.Decimal(convertToNumber(refund.refundAmount)) } },
-      });
-    } else if (payment.payerType === 'SUPPLIER') {
-      await tx.supplier.update({
-        where: { id: payment.payerId },
-        data: { outstandingBalance: { increment: new Prisma.Decimal(convertToNumber(refund.refundAmount)) } },
-      });
-    }
 
     return {
       ...updatedRefund,
@@ -628,7 +1161,11 @@ export async function createPaymentFromTransaction(
   customerId: string | null,
   amount: number,
   paymentMethod: string,
-  txClient: Prisma.TransactionClient
+  txClient: Prisma.TransactionClient,
+  referenceOrderId?: string | null,
+  paymentDate?: Date,
+  referenceNumber?: string | null,
+  notes?: string | null
 ): Promise<string> {
   try {
     console.log(`[Payment] Creating payment from transaction - ID: ${transactionId}, Customer: ${customerId}, Amount: ${amount}, Method: ${paymentMethod}`);
@@ -654,18 +1191,29 @@ export async function createPaymentFromTransaction(
         payerType: customerId ? 'CUSTOMER' : 'CUSTOMER', // Always CUSTOMER for POS
         customerId: customerId || null,
         supplierId: null,
-        paymentDate: new Date(),
+        paymentDate: paymentDate || new Date(),
         amount: new Prisma.Decimal(amount),
         paymentMethod: paymentMethod as any,
-        referenceNumber: `TXN-${transactionId.substring(0, 8).toUpperCase()}`,
-        notes: `POS Transaction ${transactionId.substring(0, 8)}`,
+        referenceOrderId: referenceOrderId || null,
+        referenceNumber: referenceNumber || `TXN-${transactionId.substring(0, 8).toUpperCase()}`,
+        notes: notes || `POS Transaction ${transactionId.substring(0, 8)}`,
         status: 'COMPLETED',
         transactionFee: new Prisma.Decimal(0),
         netAmount: new Prisma.Decimal(amount),
-        currency: 'USD',
+        currency: getCurrencyCode(),
       },
     });
     console.log(`[Payment] Payment record created: ${payment.id}`);
+
+    if (customerId && referenceOrderId) {
+      await createCustomerAllocation(txClient, {
+        paymentId: payment.id,
+        salesOrderId: referenceOrderId,
+        allocatedAmount: payment.amount,
+      });
+      await syncSalesOrderPaymentState(txClient, referenceOrderId);
+      await syncCustomerOutstandingBalance(txClient, customerId);
+    }
 
     // Create Ledger entries for revenue recognition
     const debitAccount = getAccountFromPaymentMethod(paymentMethod);

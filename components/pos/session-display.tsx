@@ -1,8 +1,9 @@
 'use client';
 
-import { formatCurrency } from '@/lib/utils';
+import { CurrencySymbol } from '@/components/ui/currency-symbol';
+import { formatCurrency } from '@/lib/currency';
 import { POSSessionWithRelations } from '@/types/pos-session.types';
-import { Clock, DollarSign, User } from 'lucide-react';
+import { Clock, User } from 'lucide-react';
 import { SessionStatusBadge } from './session-status-badge';
 
 interface SessionDisplayProps {
@@ -48,7 +49,7 @@ export function SessionDisplay({ session }: SessionDisplayProps) {
 
         {/* Opening Cash */}
         <div className="flex items-start gap-3">
-          <DollarSign className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+          <CurrencySymbol className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0 inline-flex items-center justify-center" />
           <div>
             <p className="text-xs text-gray-500">Opening Cash</p>
             <p className="text-sm font-semibold text-gray-900">
@@ -59,7 +60,7 @@ export function SessionDisplay({ session }: SessionDisplayProps) {
 
         {/* Total Sales */}
         <div className="flex items-start gap-3">
-          <DollarSign className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+          <CurrencySymbol className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0 inline-flex items-center justify-center" />
           <div>
             <p className="text-xs text-gray-500">Total Sales</p>
             <p className="text-sm font-semibold text-gray-900">

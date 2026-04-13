@@ -1,7 +1,7 @@
 // components/layout/Sidebar.tsx
 'use client';
 
-import { Banknote, CreditCard, Factory, FileText, Folder, LayoutDashboard, LineChart, Package, ShoppingCart, Tag, Truck, Users } from 'lucide-react';
+import { Banknote, CreditCard, Factory, FileText, Folder, LayoutDashboard, LineChart, Package, ShoppingCart, Tag, Truck, Users, IndianRupee } from 'lucide-react';
 import Link from 'next/link';
 import { POSNavigation } from './pos-navigation';
 
@@ -18,6 +18,7 @@ export function Sidebar() {
     { name: 'Suppliers', icon: Factory, href: '/dashboard/suppliers' },
     { name: 'Products', icon: Tag, href: '/dashboard/products' },
     { name: 'Categories', icon: Folder, href: '/dashboard/categories' },
+    { name: 'Pricelist', icon: IndianRupee, href: '/dashboard/pricelists' },
     { name: 'Accounting', icon: Banknote, href: '/dashboard/accounting' },
   ];
 

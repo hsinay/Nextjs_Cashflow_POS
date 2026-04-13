@@ -4,11 +4,15 @@ import { prisma } from '@/lib/prisma';
 import { createCustomerSchema, updateCustomerSchema } from '@/lib/validations/customer.schema';
 import { CreateCustomerInput, CustomerFilters, CustomerSegment, UpdateCustomerInput } from '@/types/customer.types';
 import { Prisma } from '@prisma/client';
+import { createPayment } from './payment.service';
 
 function convertToNumber(value: unknown): unknown {
     if (value === null || value === undefined) return value;
     if (value instanceof Prisma.Decimal) {
         return value.toNumber();
+    }
+    if (value instanceof Date) {
+        return value;
     }
     if (Array.isArray(value)) {
         return value.map(v => convertToNumber(v));
@@ -22,6 +26,10 @@ function convertToNumber(value: unknown): unknown {
 }
 
 export const CustomerService = {
+  /**
+   * Get all customers (balance included only when filtering by highRisk/creditIssues)
+   * This is a conditional optimization - benefits from lightweight query when filters not used
+   */
   async getAllCustomers(filters: CustomerFilters) {
     const { search, segment, highRisk, creditIssues, page = 1, limit = 20 } = filters;
     const where: any = { isActive: true };
@@ -34,6 +42,26 @@ export const CustomerService = {
     }
     if (segment) where.aiSegment = segment;
     const skip = (page - 1) * limit;
+    
+    // If no balance-dependent filters, use lightweight query
+    if (!highRisk && !creditIssues) {
+      const [customers, total] = await Promise.all([
+        prisma.customer.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.customer.count({ where }),
+      ]);
+      
+      return {
+        customers: convertToNumber(customers),
+        pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
+      };
+    }
+
+    // Otherwise, fetch with balance for filtering
     const customers = await prisma.customer.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -57,7 +85,7 @@ export const CustomerService = {
     let filtered = customersWithBalance;
     if (highRisk) filtered = filtered.filter(c => (c.churnRiskScore ?? 0) > 0.7);
     if (creditIssues) filtered = filtered.filter(c => c.outstandingBalance >= c.creditLimit);
-    // Adjust total/pages if in-memory filters changed the count
+    
     const effectiveTotal = (highRisk || creditIssues) ? filtered.length : total;
     return {
       customers: filtered,
@@ -161,12 +189,19 @@ export const CustomerService = {
   },
   async getCreditIssueCustomers() {
     const customers = await prisma.customer.findMany({ where: { isActive: true } });
-    const result: typeof customers = [];
-    for (const c of customers) {
-      const outstanding = await CustomerService.calculateOutstandingBalance(c.id);
-      if (outstanding >= Number(c.creditLimit)) result.push(c);
-    }
-    return convertToNumber(result);
+    // Parallelize balance calculation instead of serial for loop
+    const customersWithBalance = await Promise.all(
+      customers.map(async (c) => ({
+        customer: c,
+        outstanding: await CustomerService.calculateOutstandingBalance(c.id),
+      }))
+    );
+    // Filter and return only those with credit issues
+    return convertToNumber(
+      customersWithBalance
+        .filter(cb => cb.outstanding >= Number(cb.customer.creditLimit))
+        .map(cb => cb.customer)
+    );
   },
   async getCustomerBalance(id: string) {
     const customer = await prisma.customer.findUnique({ where: { id, isActive: true } });
@@ -217,67 +252,21 @@ export const CustomerService = {
   },
 
   async payBalance(customerId: string, amount: number, paymentMethod: string) {
-    return prisma.$transaction(async (tx) => {
-      const customer = await tx.customer.findUnique({ where: { id: customerId } });
-      if (!customer) throw new Error('Customer not found');
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new Error('Customer not found');
 
-      const outstandingBalance = await CustomerService.calculateOutstandingBalance(customerId);
-      if (amount > outstandingBalance) {
-        throw new Error('Payment amount cannot exceed outstanding balance.');
-      }
+    const outstandingBalance = await CustomerService.calculateOutstandingBalance(customerId);
+    if (amount > outstandingBalance) {
+      throw new Error('Payment amount cannot exceed outstanding balance.');
+    }
 
-      // Record the payment
-      const payment = await tx.payment.create({
-        data: {
-          payerId: customerId,
-          payerType: 'CUSTOMER',
-          customerId,
-          amount,
-          paymentMethod: paymentMethod as any,
-          status: 'COMPLETED',
-          netAmount: amount, // Assuming no transaction fees for now
-        },
-      });
-
-      // Apply payment to oldest unpaid sales orders
-      const unpaidOrders = await tx.salesOrder.findMany({
-        where: {
-          customerId,
-          status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
-        },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      let remainingAmountToApply = amount;
-      for (const order of unpaidOrders) {
-        if (remainingAmountToApply <= 0) break;
-
-        const orderBalance = order.balanceAmount.toNumber();
-        const paymentForOrder = Math.min(remainingAmountToApply, orderBalance);
-
-        const newBalance = orderBalance - paymentForOrder;
-        const newStatus = newBalance <= 0 ? 'PAID' : 'PARTIALLY_PAID';
-
-        await tx.salesOrder.update({
-          where: { id: order.id },
-          data: {
-            balanceAmount: newBalance,
-            status: newStatus,
-          },
-        });
-
-        remainingAmountToApply -= paymentForOrder;
-      }
-      
-      // Update customer's outstanding balance
-      const newOutstandingBalance = outstandingBalance - amount;
-      await tx.customer.update({
-        where: { id: customerId },
-        data: { outstandingBalance: newOutstandingBalance }
-      });
-
-
-      return payment;
+    return createPayment({
+      payerId: customerId,
+      payerType: 'CUSTOMER',
+      amount,
+      paymentMethod: paymentMethod as any,
+      status: 'COMPLETED',
+      notes: `Customer balance payment for ${customer.name}`,
     });
   },
 };

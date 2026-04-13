@@ -1,15 +1,16 @@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/currency';
+import { formatDateTimeLocale } from '@/lib/utils';
 import { Payment } from '@/types/payment.types';
 import {
-    Banknote,
-    Building2,
-    CheckCircle2,
-    CreditCard,
-    Smartphone as MobileWallet,
-    Smartphone,
-    Wallet,
-    Wallet2,
+  Banknote,
+  Building2,
+  CheckCircle2,
+  CreditCard,
+  Smartphone as MobileWallet,
+  Smartphone,
+  Wallet,
+  Wallet2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -45,17 +46,6 @@ const paymentMethodColors = {
 };
 
 export function PaymentTable({ payments, pagination }: PaymentTableProps) {
-  const formatDate = (date: Date) => {
-    const d = new Date(date);
-    return d.toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
 
   return (
     <div className="space-y-4">
@@ -106,7 +96,7 @@ export function PaymentTable({ payments, pagination }: PaymentTableProps) {
                   return (
                     <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(payment.paymentDate)}
+                        {formatDateTimeLocale(payment.paymentDate)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{payerName}</div>

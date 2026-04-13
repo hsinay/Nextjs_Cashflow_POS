@@ -36,13 +36,13 @@ export default async function PurchaseOrdersPage({ searchParams }: PurchaseOrder
   }
 
   const { orders, pagination } = await getAllPurchaseOrders(filters);
-  const suppliers = await prisma.supplier.findMany({ where: { isActive: true }, orderBy: { name: 'asc' }});
-  // Convert creditLimit and outstandingBalance to number for each supplier
-  const suppliersWithConvertedCreditLimit = suppliers.map(supplier => ({
-    ...supplier,
-    creditLimit: supplier.creditLimit.toNumber(),
-    outstandingBalance: supplier.outstandingBalance.toNumber(),
-  }));
+  
+  // Fetch only dropdown data (id and name) - no balance calculations needed
+  const suppliers = await prisma.supplier.findMany({ 
+    where: { isActive: true }, 
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  });
 
   return (
     <div className="space-y-8">
@@ -67,7 +67,7 @@ export default async function PurchaseOrdersPage({ searchParams }: PurchaseOrder
         initialSearch={searchParams.search || ''}
         initialSupplier={searchParams.supplier || ''}
         initialStatus={searchParams.status || ''}
-        suppliers={suppliersWithConvertedCreditLimit}
+        suppliers={suppliers as any}
         orders={orders}
         pagination={pagination}
       />

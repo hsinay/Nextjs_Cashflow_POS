@@ -4,7 +4,7 @@
  * Change the CURRENCY setting here and it will reflect across all modules
  */
 
-export type CurrencyType = 'INR' | 'USD' | 'EUR' | 'GBP' | 'JPY';
+export type CurrencyType = 'INR' | 'USD' | 'EUR' | 'GBP' | 'JPY' | 'NPR';
 
 interface CurrencyConfig {
   code: CurrencyType;
@@ -45,11 +45,17 @@ const CURRENCY_SETTINGS: Record<CurrencyType, CurrencyConfig> = {
     locale: 'ja-JP',
     decimals: 0,
   },
+  NPR: {
+    code: 'NPR',
+    symbol: '₨',
+    locale: 'ne-NP',
+    decimals: 2,
+  },
 };
 
 /**
  * ⚠️ CHANGE THIS TO SWITCH CURRENCY GLOBALLY
- * Options: 'INR' | 'USD' | 'EUR' | 'GBP' | 'JPY'
+ * Options: 'INR' | 'USD' | 'EUR' | 'GBP' | 'JPY' | 'NPR'
  * All currency displays will automatically update
  */
 export const ACTIVE_CURRENCY: CurrencyType = 'INR';
@@ -144,6 +150,35 @@ export function getCurrencyDecimals(): number {
 }
 
 /**
+ * Get list of all available currencies for dropdowns/selectors
+ * @returns Array of currency objects with code, symbol, and display name
+ *
+ * @example
+ * const currencies = getAvailableCurrencies();
+ * // [
+ * //   { code: 'INR', symbol: '₹', displayName: 'INR - Indian Rupee' },
+ * //   { code: 'NPR', symbol: '₨', displayName: 'NPR - Nepalese Rupee' },
+ * //   ...
+ * // ]
+ */
+export function getAvailableCurrencies() {
+  const currencyNames: Record<CurrencyType, string> = {
+    INR: 'Indian Rupee',
+    USD: 'US Dollar',
+    EUR: 'Euro',
+    GBP: 'British Pound',
+    JPY: 'Japanese Yen',
+    NPR: 'Nepalese Rupee',
+  };
+
+  return (Object.keys(CURRENCY_SETTINGS) as CurrencyType[]).map((code) => ({
+    code,
+    symbol: CURRENCY_SETTINGS[code].symbol,
+    displayName: `${code} - ${currencyNames[code]}`,
+  }));
+}
+
+/**
  * Format in Intl.NumberFormat style (for advanced formatting)
  * @param amount - The amount to format
  * @returns Intl.NumberFormat instance
@@ -171,5 +206,6 @@ export default {
   getCurrencyDecimals,
   getCurrencyFormatter,
   getCurrencyConfig,
+  getAvailableCurrencies,
   ACTIVE_CURRENCY,
 };

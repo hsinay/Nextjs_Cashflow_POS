@@ -2,6 +2,7 @@
  * Inventory utilities for CSV export and bulk operations
  */
 
+import { formatCurrency as globalFormatCurrency } from '@/lib/currency';
 import { ProductInventory } from '@/services/inventory.service';
 
 /**
@@ -89,8 +90,8 @@ export function calculateInventoryStats(products: ProductInventory[]) {
 }
 
 /**
- * Format currency with Indian Rupee symbol
+ * Format currency using the global currency configuration
  */
 export function formatCurrency(value: number): string {
-  return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return globalFormatCurrency(value);
 }
