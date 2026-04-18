@@ -1739,3 +1739,13 @@ model PricelistItem {
 
 // Extend existing Product model with pricelist relation
 // Add to Product model: pricelistItems PricelistItem[] @relation("PricelistItem")
+
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}

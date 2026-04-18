@@ -1,42 +1,19 @@
 import type { Metadata } from 'next';
-import { Sidebar } from '../components/layout/Sidebar';
-import { Topbar } from '../components/layout/Topbar';
-import './globals.css';
+import { LayoutShell } from '@/components/layout/LayoutShell';
 import { Providers } from './providers';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'CashFlow AI - ERP System',
   description: 'AI-Powered Point of Sale & Enterprise Resource Planning System',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // TODO: Implement actual logic to determine if it's a dashboard route, likely using useRouter from 'next/navigation'
-  const isDashboardRoute = true; 
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body suppressHydrationWarning>
         <Providers>
-          {isDashboardRoute ? (
-            <div className="grid grid-cols-[260px_1fr] grid-rows-[70px_1fr] h-screen">
-              <div className="col-span-1 row-span-2">
-                <Sidebar />
-              </div>
-              <div className="col-span-1 row-span-1">
-                <Topbar />
-              </div>
-              <main className="col-span-1 row-span-1 overflow-y-auto p-8">
-                {children}
-              </main>
-            </div>
-          ) : (
-            // Default layout for non-dashboard routes (e.g., login, public pages)
-            children
-          )}
+          <LayoutShell>{children}</LayoutShell>
         </Providers>
       </body>
     </html>
