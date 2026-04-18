@@ -16,7 +16,9 @@
     "prisma:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:seed": "ts-node prisma/seed.ts",
-    "db:verify:payment-allocations": "ts-node prisma/verify-payment-allocation-regression.ts"
+    "db:verify:payment-allocations": "ts-node prisma/verify-payment-allocation-regression.ts",
+    "migrate:images:imagekit": "ts-node --esm scripts/migrate-images-to-imagekit.ts",
+    "migrate:categories:imagekit-folder": "ts-node --esm scripts/normalize-category-imagekit-folder.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

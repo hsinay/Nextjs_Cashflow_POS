@@ -4,16 +4,30 @@ import { prisma } from '@/lib/prisma';
 import { PaginatedProducts, Product, ProductFilters } from '@/types/product.types';
 import { Prisma } from '@prisma/client';
 
-/**
- * Convert Decimal to number for JSON serialization
- */
-function convertToNumber(value: unknown): unknown {
-  if (value === null || value === undefined) return value;
-  if (typeof value === 'object' && '_bsontype' in value) {
-    // Prisma Decimal
-    return parseFloat((value as { toString(): string }).toString());
+function convertDecimalToNumber(value: Prisma.Decimal): number {
+  return value.toNumber();
+}
+
+function convertOptionalDecimalToNumber(
+  value: Prisma.Decimal | null | undefined
+): number | null | undefined {
+  if (value === null || value === undefined) {
+    return value;
   }
-  return value;
+
+  return value.toNumber();
+}
+
+function normalizeImageUrl(imageUrl?: string | null): string | null {
+  if (!imageUrl) {
+    return null;
+  }
+
+  if (imageUrl.startsWith('data:')) {
+    throw new Error('Base64 image payloads are not allowed');
+  }
+
+  return imageUrl;
 }
 
 /**
@@ -49,6 +63,9 @@ export async function getAllProducts(filters: ProductFilters): Promise<Paginated
   const where: Prisma.ProductWhereInput = {
     isActive: isActive !== undefined ? isActive : true,
     ...(categoryId && { categoryId }),
+    ...(lowStock && {
+      reorderLevel: { not: null },
+    }),
   };
 
   // Add search filter
@@ -64,28 +81,52 @@ export async function getAllProducts(filters: ProductFilters): Promise<Paginated
   const total = await prisma.product.count({ where });
 
   // Build additional filters for low stock
-  let products = await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where,
-    include: { category: true },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      sku: true,
+      barcode: true,
+      imageUrl: true,
+      price: true,
+      costPrice: true,
+      stockQuantity: true,
+      reorderLevel: true,
+      taxRate: true,
+      isActive: true,
+      categoryId: true,
+      aiTags: true,
+      visionEmbedding: true,
+      createdAt: true,
+      updatedAt: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          imageUrl: true,
+          parentCategoryId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+    },
     skip,
     take: limit,
     orderBy: { createdAt: 'desc' },
   });
 
-  // Filter low stock items if requested
-  if (lowStock) {
-    products = products.filter(
-      (p) => p.reorderLevel && p.stockQuantity <= p.reorderLevel
-    );
-  }
-
   // Convert to Product type and add calculated fields
-  const convertedProducts: Product[] = products.map((p) => ({
-    ...p,
-    price: convertToNumber(p.price),
-    costPrice: p.costPrice ? convertToNumber(p.costPrice) : null,
-    taxRate: p.taxRate ? convertToNumber(p.taxRate) : null,
-  }));
+  const convertedProducts: Product[] = products
+    .filter((p) => !lowStock || (p.reorderLevel !== null && p.stockQuantity <= p.reorderLevel))
+    .map((p) => ({
+      ...p,
+      price: convertDecimalToNumber(p.price),
+      costPrice: convertOptionalDecimalToNumber(p.costPrice) ?? null,
+      taxRate: convertOptionalDecimalToNumber(p.taxRate) ?? null,
+    }));
 
   const pages = Math.ceil(total / limit);
 
@@ -106,16 +147,28 @@ export async function getAllProducts(filters: ProductFilters): Promise<Paginated
 export async function getProductById(id: string): Promise<Product | null> {
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { category: true },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          imageUrl: true,
+          parentCategoryId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+    },
   });
 
   if (!product) return null;
 
   return {
     ...product,
-    price: convertToNumber(product.price),
-    costPrice: product.costPrice ? convertToNumber(product.costPrice) : null,
-    taxRate: product.taxRate ? convertToNumber(product.taxRate) : null,
+    price: convertDecimalToNumber(product.price),
+    costPrice: convertOptionalDecimalToNumber(product.costPrice) ?? null,
+    taxRate: convertOptionalDecimalToNumber(product.taxRate) ?? null,
   };
 }
 
@@ -153,7 +206,7 @@ export async function createProduct(data: any): Promise<Product> {
       description: data.description || null,
       sku: sku || null,
       barcode: data.barcode || null,
-      imageUrl: data.imageUrl || null,
+      imageUrl: normalizeImageUrl(data.imageUrl),
       price: new Prisma.Decimal(data.price),
       costPrice: data.costPrice ? new Prisma.Decimal(data.costPrice) : null,
       stockQuantity: data.stockQuantity || 0,
@@ -168,9 +221,9 @@ export async function createProduct(data: any): Promise<Product> {
 
   return {
     ...product,
-    price: convertToNumber(product.price),
-    costPrice: product.costPrice ? convertToNumber(product.costPrice) : null,
-    taxRate: product.taxRate ? convertToNumber(product.taxRate) : null,
+    price: convertDecimalToNumber(product.price),
+    costPrice: convertOptionalDecimalToNumber(product.costPrice) ?? null,
+    taxRate: convertOptionalDecimalToNumber(product.taxRate) ?? null,
   };
 }
 
@@ -212,7 +265,7 @@ export async function updateProduct(id: string, data: any): Promise<Product> {
   if (data.description !== undefined) updateData.description = data.description;
   if (data.sku !== undefined) updateData.sku = data.sku;
   if (data.barcode !== undefined) updateData.barcode = data.barcode;
-  if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
+  if (data.imageUrl !== undefined) updateData.imageUrl = normalizeImageUrl(data.imageUrl);
   if (data.price !== undefined) updateData.price = new Prisma.Decimal(data.price);
   if (data.costPrice !== undefined) {
     updateData.costPrice = data.costPrice ? new Prisma.Decimal(data.costPrice) : null;
@@ -234,9 +287,9 @@ export async function updateProduct(id: string, data: any): Promise<Product> {
 
   return {
     ...updated,
-    price: convertToNumber(updated.price),
-    costPrice: updated.costPrice ? convertToNumber(updated.costPrice) : null,
-    taxRate: updated.taxRate ? convertToNumber(updated.taxRate) : null,
+    price: convertDecimalToNumber(updated.price),
+    costPrice: convertOptionalDecimalToNumber(updated.costPrice) ?? null,
+    taxRate: convertOptionalDecimalToNumber(updated.taxRate) ?? null,
   };
 }
 
@@ -312,9 +365,9 @@ export async function deleteProduct(id: string): Promise<Product> {
 
   return {
     ...deleted,
-    price: convertToNumber(deleted.price),
-    costPrice: deleted.costPrice ? convertToNumber(deleted.costPrice) : null,
-    taxRate: deleted.taxRate ? convertToNumber(deleted.taxRate) : null,
+    price: convertDecimalToNumber(deleted.price),
+    costPrice: convertOptionalDecimalToNumber(deleted.costPrice) ?? null,
+    taxRate: convertOptionalDecimalToNumber(deleted.taxRate) ?? null,
   };
 }
 
@@ -336,9 +389,9 @@ export async function checkLowStock(): Promise<Product[]> {
 
   return lowStock.map((p) => ({
     ...p,
-    price: convertToNumber(p.price),
-    costPrice: p.costPrice ? convertToNumber(p.costPrice) : null,
-    taxRate: p.taxRate ? convertToNumber(p.taxRate) : null,
+    price: convertDecimalToNumber(p.price),
+    costPrice: convertOptionalDecimalToNumber(p.costPrice) ?? null,
+    taxRate: convertOptionalDecimalToNumber(p.taxRate) ?? null,
   }));
 }
 
@@ -361,9 +414,9 @@ export async function searchProducts(query: string, limit: number = 10): Promise
 
   return products.map((p) => ({
     ...p,
-    price: convertToNumber(p.price),
-    costPrice: p.costPrice ? convertToNumber(p.costPrice) : null,
-    taxRate: p.taxRate ? convertToNumber(p.taxRate) : null,
+    price: convertDecimalToNumber(p.price),
+    costPrice: convertOptionalDecimalToNumber(p.costPrice) ?? null,
+    taxRate: convertOptionalDecimalToNumber(p.taxRate) ?? null,
   }));
 }
 

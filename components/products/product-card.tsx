@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/currency';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 import { Product } from '@/types/product.types';
 import { Edit, Eye, Package } from 'lucide-react';
 import Image from 'next/image';
@@ -38,10 +39,17 @@ export function ProductCard({ product, showActions = true }: ProductCardProps) {
       <div className="relative w-full h-48 bg-gray-100 overflow-hidden rounded-t-lg">
         {product.imageUrl ? (
           <Image
-            src={product.imageUrl}
+            src={getOptimizedImageUrl(product.imageUrl, {
+              width: 480,
+              height: 320,
+              quality: 80,
+              format: 'auto',
+              crop: 'at_max',
+            })}
             alt={product.name}
             fill
             className="object-cover hover:scale-105 transition-transform"
+            sizes="(max-width: 768px) 100vw, 33vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">

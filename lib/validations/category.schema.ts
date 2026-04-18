@@ -21,6 +21,7 @@ export const createCategorySchema = z.object({
   imageUrl: z
     .string()
     .url('Invalid image URL')
+    .refine((value) => !value.startsWith('data:'), 'Base64 image payloads are not allowed')
     .optional()
     .nullable(),
 });

@@ -26,6 +26,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/currency';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 import { Product } from '@/types/product.types';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -119,10 +120,17 @@ export function ProductTable({
                   {product.imageUrl ? (
                     <div className="relative w-12 h-12 rounded border overflow-hidden bg-gray-100">
                       <Image
-                        src={product.imageUrl}
+                        src={getOptimizedImageUrl(product.imageUrl, {
+                          width: 96,
+                          height: 96,
+                          quality: 75,
+                          format: 'auto',
+                          crop: 'at_max',
+                        })}
                         alt={product.name}
                         fill
                         className="object-cover"
+                        sizes="48px"
                       />
                     </div>
                   ) : (

@@ -90,6 +90,25 @@ export function ProductForm({
     }
   }, [price, costPrice]);
 
+  const uploadProductImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', '/cashflow-pos/products');
+
+    const response = await fetch('/api/uploads/image', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to upload image');
+    }
+
+    return result.data.url as string;
+  };
+
   // Handle form submission
   const handleFormSubmit = async (data: CreateProductInput | UpdateProductInput) => {
     try {
@@ -148,7 +167,7 @@ export function ProductForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
+          <Form form={form}>
             <form
               onSubmit={form.handleSubmit(handleFormSubmit)}
               className="space-y-6"
@@ -183,6 +202,7 @@ export function ProductForm({
                           className="resize-none"
                           rows={3}
                           {...field}
+                          value={field.value ?? ''}
                         />
                       </FormControl>
                       <FormDescription>
@@ -266,7 +286,7 @@ export function ProductForm({
                     <FormItem>
                       <FormLabel>Barcode</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter barcode" {...field} />
+                        <Input placeholder="Enter barcode" {...field} value={field.value ?? ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -313,6 +333,7 @@ export function ProductForm({
                             step="0.01"
                             placeholder="0.00"
                             {...field}
+                            value={field.value ?? ''}
                             onChange={(e) =>
                               field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
                             }
@@ -339,14 +360,15 @@ export function ProductForm({
                     <FormItem>
                       <FormLabel>Tax Rate (%)</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
-                          }
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) =>
+                              field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
+                            }
                         />
                       </FormControl>
                       <FormMessage />
@@ -392,6 +414,7 @@ export function ProductForm({
                             type="number"
                             placeholder="0"
                             {...field}
+                            value={field.value ?? ''}
                             onChange={(e) =>
                               field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
                             }
@@ -422,8 +445,9 @@ export function ProductForm({
                           onChange={(url) => {
                             field.onChange(url);
                           }}
+                          onImageUpload={uploadProductImage}
                           placeholder="https://example.com/image.jpg"
-                          description="JPG or PNG (max. 5MB)"
+                          description="JPG, PNG, or WebP (max. 5MB)"
                         />
                       </FormControl>
                       <FormMessage />

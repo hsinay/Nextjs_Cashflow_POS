@@ -1,6 +1,14 @@
 import { Slot } from "@radix-ui/react-slot";
 import * as React from "react";
-import { Controller, FieldPath, FieldValues, FormProvider, useFormContext, UseFormReturn } from "react-hook-form";
+import {
+  Controller,
+  ControllerProps,
+  FieldPath,
+  FieldValues,
+  FormProvider,
+  useFormContext,
+  UseFormReturn,
+} from "react-hook-form";
 
 type FormProps<TFieldValues extends FieldValues> = {
   children: React.ReactNode;
@@ -22,27 +30,21 @@ const FormFieldContext = React.createContext<FormFieldContextValue>(
   {} as FormFieldContextValue
 )
 
-type FormFieldProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
-  React.ComponentPropsWithoutRef<typeof Controller<TFieldValues>>,
-  'render'
-> & {
+type FormFieldProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = {
+  control: ControllerProps<TFieldValues, TName>["control"];
   name: TName;
   render: ControllerProps<TFieldValues, TName>["render"];
 };
 
-const FormField = React.forwardRef(function FormField<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
-  props: FormFieldProps<TFieldValues, TName>,
-  _ref: React.ForwardedRef<React.ElementRef<typeof Controller<TFieldValues>>>
+function FormField<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+  props: FormFieldProps<TFieldValues, TName>
 ) {
   return (
     <FormFieldContext.Provider value={{ name: props.name }}>
       <Controller {...props} />
     </FormFieldContext.Provider>
   );
-}) as <TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
-  props: FormFieldProps<TFieldValues, TName> & { ref?: React.ForwardedRef<React.ElementRef<typeof Controller<TFieldValues>>> }
-) => React.ReactElement;
-FormField.displayName = "FormField";
+}
 
 function useFormField<TFieldValues extends FieldValues = FieldValues>() {
   const fieldContext = React.useContext(FormFieldContext)
@@ -184,4 +186,3 @@ export {
   FormDescription, FormField, FormItem,
   FormLabel, FormMessage, useFormField
 };
-
