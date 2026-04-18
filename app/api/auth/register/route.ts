@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/auth/register/route.ts
 
 import { prisma } from '@/lib/prisma';
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

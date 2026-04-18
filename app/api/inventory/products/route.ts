@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * GET /api/inventory/products
  * Fetch all products with stock quantities for inventory management
@@ -38,7 +39,7 @@ export async function GET() {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch products';
-    console.error('GET /api/inventory/products error:', error);
+    logger.error('GET /api/inventory/products error:', error);
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

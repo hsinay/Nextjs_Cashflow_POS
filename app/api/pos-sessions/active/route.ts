@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/lib/auth';
 import { posSessionService } from '@/services/pos-session.service';
 import { getServerSession } from 'next-auth/next';
@@ -28,7 +29,7 @@ export async function GET(_req: Request) {
       data: activeSession,
     });
   } catch (error: any) {
-    console.error('Error fetching active POS session:', error);
+    logger.error('Error fetching active POS session:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch active session' },
       { status: error.statusCode || 500 }

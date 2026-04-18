@@ -11,6 +11,7 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^uuid$': require.resolve('uuid'),
   },
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
@@ -25,6 +26,9 @@ const customJestConfig = {
     '!**/node_modules/**',
     '!**/.next/**',
     '!**/coverage/**',
+  ],
+  transformIgnorePatterns: [
+    '/node_modules/(?!uuid)/'
   ],
 }
 

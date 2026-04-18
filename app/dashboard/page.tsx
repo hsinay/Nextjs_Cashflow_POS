@@ -1,12 +1,13 @@
 'use client';
 
 import { BarChart3, Clock, DollarSign, Package, ShoppingCart, TrendingUp, Users } from 'lucide-react';
+import { formatCurrency } from '@/lib/currency';
 
 export default function DashboardPage() {
   const kpis = [
     {
       title: 'Total Revenue',
-      value: '$125,430',
+      value: formatCurrency(125430, true, 0),
       change: '+12.5%',
       isPositive: true,
       icon: DollarSign,
@@ -43,11 +44,11 @@ export default function DashboardPage() {
   ];
 
   const recentOrders = [
-    { id: 'SO001', customer: 'Acme Corp', amount: '$4,230', status: 'paid', date: '2024-12-11' },
-    { id: 'SO002', customer: 'Tech Solutions', amount: '$2,890', status: 'pending', date: '2024-12-10' },
-    { id: 'SO003', customer: 'Global Trade', amount: '$5,120', status: 'paid', date: '2024-12-10' },
-    { id: 'SO004', customer: 'Fashion Hub', amount: '$1,450', status: 'overdue', date: '2024-12-08' },
-    { id: 'SO005', customer: 'Digital Media', amount: '$3,680', status: 'pending', date: '2024-12-07' },
+    { id: 'SO001', customer: 'Acme Corp', amount: formatCurrency(4230, true, 0), status: 'paid', date: '2024-12-11' },
+    { id: 'SO002', customer: 'Tech Solutions', amount: formatCurrency(2890, true, 0), status: 'pending', date: '2024-12-10' },
+    { id: 'SO003', customer: 'Global Trade', amount: formatCurrency(5120, true, 0), status: 'paid', date: '2024-12-10' },
+    { id: 'SO004', customer: 'Fashion Hub', amount: formatCurrency(1450, true, 0), status: 'overdue', date: '2024-12-08' },
+    { id: 'SO005', customer: 'Digital Media', amount: formatCurrency(3680, true, 0), status: 'pending', date: '2024-12-07' },
   ];
 
   return (
@@ -188,7 +189,7 @@ export default function DashboardPage() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">Avg. Order Value</span>
-                <span className="font-semibold text-slate-900">$3,474</span>
+                <span className="font-semibold text-slate-900">{formatCurrency(3474, true, 0)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">Conversion Rate</span>
@@ -196,7 +197,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">Pending Payments</span>
-                <span className="font-semibold text-slate-900">$12,450</span>
+                <span className="font-semibold text-slate-900">{formatCurrency(12450, true, 0)}</span>
               </div>
             </div>
           </div>

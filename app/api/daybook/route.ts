@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from "@/lib/auth";
 import { createDayBookSchema } from "@/lib/validations/daybook.schema";
 import { daybookService } from "@/services/daybook.service";
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ success: true, data: daybooks });
   } catch (error) {
-    console.error("Failed to fetch daybooks:", error);
+    logger.error("Failed to fetch daybooks:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: daybook }, { status: 201 });
   } catch (error) {
-    console.error("Failed to open daybook:", error);
+    logger.error("Failed to open daybook:", error);
     if (error instanceof Error && error.message.includes("Day book already exists")) {
       return NextResponse.json(
         { success: false, error: error.message },

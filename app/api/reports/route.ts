@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/lib/auth';
 import { reportService } from '@/services/report.service';
 import { getServerSession } from 'next-auth';
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Report generation error:', error);
+    logger.error('Report generation error:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to generate report' },
       { status: 500 }

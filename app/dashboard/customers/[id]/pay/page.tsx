@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/lib/utils';
+import { getCurrencySymbol } from '@/lib/currency';
 import { Customer } from '@/types/customer.types';
 import { ConcretePaymentMethod } from '@/types/payment.types';
 import Link from 'next/link';
@@ -125,7 +126,7 @@ export default function PayBalancePage() {
               Payment Amount
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">{getCurrencySymbol()}</span>
               <Input
                 id="amount"
                 type="number"

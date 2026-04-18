@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/auth/change-password/route.ts
 
 import { requireAuth } from '@/lib/auth-utils';
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Change password error:', error);
+    logger.error('Change password error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/pos/transactions/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('GET /api/pos/transactions error:', error);
+        logger.error('GET /api/pos/transactions error:', error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        console.error('POST /api/pos/transactions error:', {
+        logger.error('POST /api/pos/transactions error:', {
             error: error.message,
             stack: error.stack,
             requestBody: body,

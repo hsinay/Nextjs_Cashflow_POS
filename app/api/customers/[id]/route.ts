@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/customers/[id]/route.ts
 import { CustomerService } from '@/services/customer.service';
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,7 +23,7 @@ export async function GET(
       data: customer,
     });
   } catch (error: any) {
-    console.error('Error fetching customer:', error);
+    logger.error('Error fetching customer:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch customer' },
       { status: 500 }

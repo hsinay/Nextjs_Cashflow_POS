@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Credit Transactions API Routes
  * GET /api/credit-transactions - List all credit transactions
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
       pagination: { skip, take, total },
     });
   } catch (error: unknown) {
-    console.error('[Credit Transactions GET]', error);
+    logger.error('[Credit Transactions GET]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.error('[Credit Transactions POST]', error);
+    logger.error('[Credit Transactions POST]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

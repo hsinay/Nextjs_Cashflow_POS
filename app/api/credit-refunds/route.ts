@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Credit Refunds API Routes
  * GET /api/credit-refunds - List all refunds
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
       pagination: { skip, take, total },
     });
   } catch (error: unknown) {
-    console.error('[Credit Refunds GET]', error);
+    logger.error('[Credit Refunds GET]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.error('[Credit Refunds POST]', error);
+    logger.error('[Credit Refunds POST]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

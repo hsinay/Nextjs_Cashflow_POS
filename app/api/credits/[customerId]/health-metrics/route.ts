@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Credit Health Metrics API Route
  * GET /api/credits/[customerId]/health-metrics - Get credit health metrics and risk score
@@ -33,7 +34,7 @@ export async function GET(
       );
     }
 
-    console.error('[Health Metrics GET]', error);
+    logger.error('[Health Metrics GET]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

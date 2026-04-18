@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/purchase-orders/[id]/payments/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -31,7 +32,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: payments }, { status: 200 });
     } catch (error) {
-        console.error(`GET /api/purchase-orders/${params.id}/payments error:`, error);
+        logger.error(`GET /api/purchase-orders/${params.id}/payments error:`, error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             message: 'Payment linked successfully' 
         }, { status: 200 });
     } catch (error: any) {
-        console.error(`POST /api/purchase-orders/${params.id}/payments error:`, error);
+        logger.error(`POST /api/purchase-orders/${params.id}/payments error:`, error);
         
         if (error.name === 'ZodError') {
             return NextResponse.json(
@@ -114,7 +115,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             message: 'Payment unlinked successfully' 
         }, { status: 200 });
     } catch (error: any) {
-        console.error(`DELETE /api/purchase-orders/${params.id}/payments error:`, error);
+        logger.error(`DELETE /api/purchase-orders/${params.id}/payments error:`, error);
         
         if (error.name === 'ZodError') {
             return NextResponse.json(

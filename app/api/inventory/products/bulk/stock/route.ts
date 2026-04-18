@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * PATCH /api/inventory/products/bulk/stock
  * Update stock for multiple products at once
@@ -127,7 +128,7 @@ export async function PATCH(request: NextRequest) {
       { status: errors.length === 0 ? 200 : 207 }
     );
   } catch (error) {
-    console.error('PATCH /api/inventory/products/bulk/stock error:', error);
+    logger.error('PATCH /api/inventory/products/bulk/stock error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to update stocks';
     return NextResponse.json(
       { success: false, error: errorMessage },

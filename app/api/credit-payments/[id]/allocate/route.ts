@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Payment Allocation API Route
  * POST /api/credit-payments/[id]/allocate - Allocate payment to transactions
@@ -83,7 +84,7 @@ export async function POST(
       }
     }
 
-    console.error('[Payment Allocate POST]', error);
+    logger.error('[Payment Allocate POST]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

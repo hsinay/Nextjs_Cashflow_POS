@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * PATCH /api/inventory/products/[id]/stock
  * Update product stock quantity
@@ -62,7 +63,7 @@ export async function PATCH(
       { status: 200 }
     );
   } catch (error) {
-    console.error('PATCH /api/inventory/products/[id]/stock error:', error);
+    logger.error('PATCH /api/inventory/products/[id]/stock error:', error);
 
     if (error instanceof Error && error.message === 'Product not found') {
       return NextResponse.json(

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
@@ -39,7 +40,7 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch pricelists';
-    console.error('Error fetching pricelists:', error);
+    logger.error('Error fetching pricelists:', error);
     return NextResponse.json(
       { error: message },
       { status: 500 }
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to create pricelist';
-    console.error('Error creating pricelist:', error);
+    logger.error('Error creating pricelist:', error);
     return NextResponse.json(
       { error: message },
       { status: 500 }

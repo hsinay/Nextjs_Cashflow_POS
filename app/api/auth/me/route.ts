@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/auth/me/route.ts
 
 import { requireAuth } from '@/lib/auth-utils';
@@ -31,7 +32,7 @@ export async function GET() {
       );
     }
 
-    console.error('Get user error:', error);
+    logger.error('Get user error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

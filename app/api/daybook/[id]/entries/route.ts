@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from "@/lib/auth";
 import { createDayBookEntrySchema } from "@/lib/validations/daybook.schema";
 import { daybookService } from "@/services/daybook.service";
@@ -27,7 +28,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: entries });
   } catch (error) {
-    console.error("Failed to fetch entries:", error);
+    logger.error("Failed to fetch entries:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -67,7 +68,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: entry }, { status: 201 });
   } catch (error) {
-    console.error("Failed to create entry:", error);
+    logger.error("Failed to create entry:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

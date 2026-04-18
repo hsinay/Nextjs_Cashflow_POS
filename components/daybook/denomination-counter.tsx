@@ -10,7 +10,7 @@ import {
     FormLabel,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency, getCurrencySymbol } from "@/lib/currency";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -18,16 +18,17 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+const symbol = getCurrencySymbol();
 const DENOMINATIONS = [
-  { value: 2000, label: "₹2000" },
-  { value: 500, label: "₹500" },
-  { value: 100, label: "₹100" },
-  { value: 50, label: "₹50" },
-  { value: 20, label: "₹20" },
-  { value: 10, label: "₹10" },
-  { value: 5, label: "₹5" },
-  { value: 2, label: "₹2" },
-  { value: 1, label: "₹1" },
+  { value: 2000, label: `${symbol}2000` },
+  { value: 500, label: `${symbol}500` },
+  { value: 100, label: `${symbol}100` },
+  { value: 50, label: `${symbol}50` },
+  { value: 20, label: `${symbol}20` },
+  { value: 10, label: `${symbol}10` },
+  { value: 5, label: `${symbol}5` },
+  { value: 2, label: `${symbol}2` },
+  { value: 1, label: `${symbol}1` },
 ];
 
 const denominationSchema = z.object({

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/payments/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('GET /api/payments error:', error);
+        logger.error('GET /api/payments error:', error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        console.error('POST /api/payments error:', error);
+        logger.error('POST /api/payments error:', error);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

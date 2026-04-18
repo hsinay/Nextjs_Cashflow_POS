@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from "@/lib/auth";
 import { createExpenseCategorySchema } from "@/lib/validations/daybook.schema";
 import { expenseCategoryService } from "@/services/expense-category.service";
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
     const categories = await expenseCategoryService.getCategoriesFlat(!includeInactive);
     return NextResponse.json({ success: true, data: categories });
   } catch (error) {
-    console.error("Failed to fetch expense categories:", error);
+    logger.error("Failed to fetch expense categories:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: category }, { status: 201 });
   } catch (error) {
-    console.error("Failed to create expense category:", error);
+    logger.error("Failed to create expense category:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

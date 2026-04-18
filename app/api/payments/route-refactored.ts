@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * GET /api/payments
  * POST /api/payments
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error('GET /api/payments error:', error);
+    logger.error('GET /api/payments error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch payments' },
       { status: 500 }
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: payment }, { status: 201 });
   } catch (error) {
-    console.error('POST /api/payments error:', error);
+    logger.error('POST /api/payments error:', error);
     return NextResponse.json(
       { error: 'Failed to create payment' },
       { status: 500 }

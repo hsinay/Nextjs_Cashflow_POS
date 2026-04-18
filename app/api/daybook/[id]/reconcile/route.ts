@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
@@ -53,7 +54,7 @@ export async function POST(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Failed to reconcile daybook:", error);
+    logger.error("Failed to reconcile daybook:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -79,7 +80,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: summary });
   } catch (error) {
-    console.error("Failed to fetch reconciliation summary:", error);
+    logger.error("Failed to fetch reconciliation summary:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

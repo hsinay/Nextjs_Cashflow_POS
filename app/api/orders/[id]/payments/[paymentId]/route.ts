@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/orders/[id]/payments/[paymentId]/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -32,7 +33,7 @@ export async function DELETE(
       message: 'Payment deleted successfully',
     });
   } catch (error: any) {
-    console.error('Error deleting payment:', error);
+    logger.error('Error deleting payment:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

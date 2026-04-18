@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { authOptions } from '@/lib/auth';
 import { getSalesOrderById } from '@/services/sales-order.service';
+import { formatCurrency } from '@/lib/currency';
 import { getServerSession } from 'next-auth';
 import { notFound, redirect } from 'next/navigation';
 
@@ -58,8 +59,8 @@ export default async function SalesOrderPage({ params }: SalesOrderPageProps) {
                                     <TableRow key={item.id}>
                                         <TableCell>{item.product?.name || 'N/A'}</TableCell>
                                         <TableCell>{item.quantity}</TableCell>
-                                        <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
-                                        <TableCell className="text-right">${item.subtotal.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(item.subtotal)}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -86,15 +87,15 @@ export default async function SalesOrderPage({ params }: SalesOrderPageProps) {
                         <CardContent className="space-y-2">
                             <div className="flex justify-between">
                                 <span>Subtotal</span>
-                                <span>${order.totalAmount.toFixed(2)}</span>
+                                <span>{formatCurrency(order.totalAmount)}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span>Tax</span>
-                                <span>$0.00</span>
+                                <span>{formatCurrency(0)}</span>
                             </div>
                             <div className="flex justify-between font-bold text-lg">
                                 <span>Total</span>
-                                <span>${order.totalAmount.toFixed(2)}</span>
+                                <span>{formatCurrency(order.totalAmount)}</span>
                             </div>
                         </CardContent>
                     </Card>

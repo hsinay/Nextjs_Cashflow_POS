@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Payment Reminders API Routes
  * GET /api/payment-reminders - List all reminders
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
       pagination: { skip, take, total },
     });
   } catch (error: unknown) {
-    console.error('[Payment Reminders GET]', error);
+    logger.error('[Payment Reminders GET]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -127,7 +128,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.error('[Payment Reminders POST]', error);
+    logger.error('[Payment Reminders POST]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

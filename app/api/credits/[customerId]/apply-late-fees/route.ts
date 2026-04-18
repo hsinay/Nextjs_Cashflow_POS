@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Apply Late Fees API Route
  * POST /api/credits/[customerId]/apply-late-fees - Calculate and apply late fees to overdue transactions
@@ -50,7 +51,7 @@ export async function POST(
       );
     }
 
-    console.error('[Apply Late Fees POST]', error);
+    logger.error('[Apply Late Fees POST]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

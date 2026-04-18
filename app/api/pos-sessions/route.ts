@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/lib/auth';
 import {
     createPOSSessionSchema,
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('Error creating POS session:', error);
+    logger.error('Error creating POS session:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create POS session' },
       { status: error.statusCode || 500 }
@@ -75,7 +76,7 @@ export async function GET(req: Request) {
       count: sessions.length,
     });
   } catch (error: any) {
-    console.error('Error listing POS sessions:', error);
+    logger.error('Error listing POS sessions:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to list POS sessions' },
       { status: error.statusCode || 500 }

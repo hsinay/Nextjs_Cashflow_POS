@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/inventory-transactions/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('GET /api/inventory-transactions error:', error);
+        logger.error('GET /api/inventory-transactions error:', error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        console.error('POST /api/inventory-transactions error:', error);
+        logger.error('POST /api/inventory-transactions error:', error);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

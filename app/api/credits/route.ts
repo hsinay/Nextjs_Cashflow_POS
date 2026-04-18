@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Customer Credit Management API Routes
  * POST /api/credits - Initialize credit account
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.error('[Credits POST]', error);
+    logger.error('[Credits POST]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: summary });
   } catch (error: unknown) {
-    console.error('[Credits GET]', error);
+    logger.error('[Credits GET]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -12,6 +12,7 @@ import {
     pricelistFormSchema,
     type PricelistFormData,
 } from '@/lib/validations/pricelist.schema';
+import { formatCurrency, getCurrencyCode, getCurrencySymbol } from '@/lib/currency';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -78,7 +79,7 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
   // Friendly currency formatter for quick previews
   const prettyMoney = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined || Number.isNaN(amount)) return '—';
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(Number(amount));
+    return formatCurrency(amount);
   };
 
   const getBasePrice = (productId: string) =>
@@ -397,7 +398,7 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
           Pricelist Information
         </p>
         <Small style={{ color: Colors.text.secondary, marginBottom: Spacing.lg, display: 'block' }}>
-          💵 Currency: All prices are in NPR (Global Setting)
+          💵 Currency: All prices are in {getCurrencyCode()} (Global Setting)
         </Small>
         <div className="space-y-4">
           {/* Name */}
@@ -507,7 +508,7 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
                           id: product.id,
                           value: product.id,
                           label: product.name,
-                          searchText: `${product.name}${product.sku ? ` (${product.sku})` : ''} ${product.price ? `- ₹${product.price}` : ''}`,
+                          searchText: `${product.name}${product.sku ? ` (${product.sku})` : ''} ${product.price ? `- ${formatCurrency(product.price)}` : ''}`,
                         }))}
                       value={''}
                       onChange={(val) => {
@@ -614,7 +615,7 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
             {activeProductTab && selectedProductProduct && (
               <div>
                 <Small style={{ display: 'block', color: Colors.text.primary, fontWeight: '600', marginBottom: Spacing.md }}>
-                  💰 {selectedProductProduct.name} (SKU: {selectedProductProduct.sku || 'N/A'}) - Cost: ₹{selectedProductProduct.costPrice || 'N/A'} | Price: ₹{selectedProductProduct.price || 'N/A'}
+                  💰 {selectedProductProduct.name} (SKU: {selectedProductProduct.sku || 'N/A'}) - Cost: {selectedProductProduct.costPrice ? formatCurrency(selectedProductProduct.costPrice) : 'N/A'} | Price: {selectedProductProduct.price ? formatCurrency(selectedProductProduct.price) : 'N/A'}
                 </Small>
 
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -807,8 +808,8 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
                                   </td>
                                   <td style={{ padding: Spacing.md, color: Colors.text.primary, fontWeight: '500', minWidth: '100px', textAlign: 'center' }}>
                                     {displayTier.calculationType === 'PERCENTAGE_DISCOUNT' && `${displayTier.discountPercentage}%`}
-                                    {displayTier.calculationType === 'FIXED_PRICE' && `₨${displayTier.fixedPrice}`}
-                                    {displayTier.calculationType === 'FIXED_DISCOUNT' && `₨${displayTier.fixedDiscount}`}
+                                    {displayTier.calculationType === 'FIXED_PRICE' && `${getCurrencySymbol()}${displayTier.fixedPrice}`}
+                                    {displayTier.calculationType === 'FIXED_DISCOUNT' && `${getCurrencySymbol()}${displayTier.fixedDiscount}`}
                                     {displayTier.calculationType === 'FORMULA' && `M:${displayTier.formulaMargin} U:${displayTier.formulaMarkup}%`}
                                     <div className="text-[11px] text-gray-500 mt-1">
                                       Est. unit: {getEffectiveUnitPreview(displayTier, selectedProductProduct.id)}

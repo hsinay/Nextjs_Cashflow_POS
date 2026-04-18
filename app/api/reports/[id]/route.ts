@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/lib/auth';
 import { reportService } from '@/services/report.service';
 import { getServerSession } from 'next-auth';
@@ -49,7 +50,7 @@ export async function GET(
       },
     });
   } catch (error: any) {
-    console.error('Report retrieval error:', error);
+    logger.error('Report retrieval error:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to retrieve report' },
       { status: 500 }

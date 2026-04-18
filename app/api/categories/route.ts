@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/categories/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<APIRespons
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error in GET /api/categories:', error);
+    logger.error('Error in GET /api/categories:', error);
     return NextResponse.json(
       {
         success: false,
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<APIRespon
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error in POST /api/categories:', error);
+    logger.error('Error in POST /api/categories:', error);
 
     if (error instanceof Error) {
       // Handle specific business logic errors

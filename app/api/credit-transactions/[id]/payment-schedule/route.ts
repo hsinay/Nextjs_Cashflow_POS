@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Payment Schedule API Route
  * GET /api/credit-transactions/[id]/payment-schedule - Get payment installment schedule
@@ -61,7 +62,7 @@ export async function GET(
       );
     }
 
-    console.error('[Payment Schedule GET]', error);
+    logger.error('[Payment Schedule GET]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

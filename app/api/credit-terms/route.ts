@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Credit Terms Configuration API Route
  * GET /api/credit-terms - Get payment terms and interest configuration
@@ -41,7 +42,7 @@ export async function GET(_req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    console.error('[Credit Terms GET]', error);
+    logger.error('[Credit Terms GET]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

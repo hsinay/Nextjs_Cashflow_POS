@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/lib/auth';
 import { closePOSSessionSchema } from '@/lib/validations/pos-session.schema';
 import { posSessionService } from '@/services/pos-session.service';
@@ -40,7 +41,7 @@ export async function GET(
       data: posSession,
     });
   } catch (error: any) {
-    console.error('Error fetching POS session:', error);
+    logger.error('Error fetching POS session:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch POS session' },
       { status: error.statusCode || 500 }
@@ -92,7 +93,7 @@ export async function PUT(
       data: closedSession,
     });
   } catch (error: any) {
-    console.error('Error closing POS session:', error);
+    logger.error('Error closing POS session:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to close POS session' },
       { status: error.statusCode || 500 }

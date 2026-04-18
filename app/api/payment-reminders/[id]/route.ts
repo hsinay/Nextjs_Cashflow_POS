@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Payment Reminder Detail API Routes
  * GET /api/payment-reminders/[id] - Get reminder details
@@ -42,7 +43,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: reminder });
   } catch (error: unknown) {
-    console.error('[Payment Reminder GET Detail]', error);
+    logger.error('[Payment Reminder GET Detail]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -105,7 +106,7 @@ export async function PUT(
       }
     }
 
-    console.error('[Payment Reminder PUT]', error);
+    logger.error('[Payment Reminder PUT]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

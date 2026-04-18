@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/currency';
+import { formatCurrency, getCurrencySymbol } from '@/lib/currency';
 import { BarChart3, Calendar, Download, Lightbulb, PieChart, TrendingUp } from 'lucide-react';
 
 export default function AnalyticsPage() {
@@ -10,7 +10,7 @@ export default function AnalyticsPage() {
   const kpis = [
     {
       title: 'Total Revenue',
-      value: '$145,230',
+      value: formatCurrency(145230, true, 0),
       change: '+12.5%',
       isPositive: true,
       bgColor: 'bg-blue-50',
@@ -18,7 +18,7 @@ export default function AnalyticsPage() {
     },
     {
       title: 'Avg Order Value',
-      value: '$3,450',
+      value: formatCurrency(3450, true, 0),
       change: '+8.2%',
       isPositive: true,
       bgColor: 'bg-green-50',
@@ -138,18 +138,18 @@ export default function AnalyticsPage() {
                   style={{ height: `${(item.revenue / 22000) * 100}%`, minHeight: '20px' }}
                 ></div>
                 <span className="text-xs text-slate-600 mt-3 font-medium">{item.name}</span>
-                <span className="text-sm font-semibold text-slate-900">${(item.revenue / 1000).toFixed(0)}k</span>
+                <span className="text-sm font-semibold text-slate-900">{getCurrencySymbol()}{(item.revenue / 1000).toFixed(0)}k</span>
               </div>
             ))}
           </div>
           <div className="mt-6 grid grid-cols-3 gap-4 pt-6 border-t border-slate-200">
             <div>
               <p className="text-xs text-slate-600 font-medium">Total Revenue</p>
-              <p className="text-xl font-bold text-slate-900 mt-1">$66,230</p>
+              <p className="text-xl font-bold text-slate-900 mt-1">{formatCurrency(66230, true, 0)}</p>
             </div>
             <div>
               <p className="text-xs text-slate-600 font-medium">Avg per Week</p>
-              <p className="text-xl font-bold text-slate-900 mt-1">$16,558</p>
+              <p className="text-xl font-bold text-slate-900 mt-1">{formatCurrency(16558, true, 0)}</p>
             </div>
             <div>
               <p className="text-xs text-slate-600 font-medium">Growth</p>
@@ -177,7 +177,7 @@ export default function AnalyticsPage() {
                     style={{ width: `${cat.percentage}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-slate-600">${(cat.revenue / 1000).toFixed(0)}k revenue</p>
+                <p className="text-xs text-slate-600">{getCurrencySymbol()}{(cat.revenue / 1000).toFixed(0)}k revenue</p>
               </div>
             ))}
           </div>
@@ -260,11 +260,11 @@ export default function AnalyticsPage() {
             <div className="flex gap-2">
               <div className="flex-1 bg-blue-50 rounded-lg p-3 text-center">
                 <p className="text-xs text-slate-600">Avg Transaction</p>
-                <p className="text-lg font-bold text-slate-900 mt-1">$117</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">{formatCurrency(117, true, 0)}</p>
               </div>
               <div className="flex-1 bg-green-50 rounded-lg p-3 text-center">
                 <p className="text-xs text-slate-600">Total Volume</p>
-                <p className="text-lg font-bold text-slate-900 mt-1">$145k</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">{getCurrencySymbol()}145k</p>
               </div>
             </div>
           </div>

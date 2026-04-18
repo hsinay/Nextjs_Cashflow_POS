@@ -10,7 +10,7 @@ import { Prisma } from '@prisma/client';
 
 export class PaymentRepository extends BaseRepository<Payment> {
   protected modelName = 'payment' as const;
-  protected select: Record<string, any> = {
+  protected select: Prisma.PaymentSelect = {
     id: true,
     referenceNumber: true,
     paymentDate: true,
@@ -70,7 +70,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
   async findByPayer(payerType: string, payerId: string): Promise<Payment[]> {
     const payments = await prisma.payment.findMany({
       where: {
-        payerType: payerType as any,
+        payerType: payerType as Prisma.EnumPayerTypeFilter,
         payerId,
       },
       orderBy: { paymentDate: 'desc' },
@@ -90,7 +90,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
   ): Promise<number> {
     const result = await prisma.payment.aggregate({
       where: {
-        payerType: payerType as any,
+        payerType: payerType as Prisma.EnumPayerTypeFilter,
         payerId,
         paymentDate: {
           gte: startDate,
@@ -117,7 +117,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
     }
 
     if (filters.payerType) {
-      where.payerType = filters.payerType as any;
+      where.payerType = filters.payerType as Prisma.EnumPayerTypeFilter;
     }
 
     if (filters.payerId) {
@@ -125,7 +125,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
     }
 
     if (filters.paymentMethod) {
-      where.paymentMethod = filters.paymentMethod as any;
+      where.paymentMethod = filters.paymentMethod as Prisma.EnumPaymentMethodFilter;
     }
 
     if (filters.startDate || filters.endDate) {
@@ -145,7 +145,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
    * Get include clause based on filters
    */
   private getInclude(filters: PaymentFilters) {
-    const include: any = {};
+    const include: Prisma.PaymentInclude = {};
 
     if (filters.payerType === 'CUSTOMER') {
       include.customer = true;
@@ -163,7 +163,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
   /**
    * Convert Prisma payment to number type (Decimal → number)
    */
-  private convertPaymentToNumber(payment: any): Payment {
+  private convertPaymentToNumber(payment: Partial<Payment> & Record<string, unknown>): Payment {
     return {
       ...payment,
       amount: this.convertToNumber(payment.amount),

@@ -197,7 +197,7 @@ export function getCurrencyFormatter(): Intl.NumberFormat {
   });
 }
 
-export default {
+const currencyService = {
   formatCurrency,
   formatCurrencyNumber,
   getCurrencySymbol,
@@ -209,3 +209,5 @@ export default {
   getAvailableCurrencies,
   ACTIVE_CURRENCY,
 };
+
+export default currencyService;

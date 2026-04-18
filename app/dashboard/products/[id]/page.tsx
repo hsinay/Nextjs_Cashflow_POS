@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { formatCurrency } from '@/lib/currency';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import Image from 'next/image';
@@ -181,13 +182,13 @@ export default async function ProductDetailPage({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Selling Price</p>
-                  <p className="text-2xl font-bold">${Number(product.price).toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(product.price)}</p>
                 </div>
                 {product.costPrice && (
                   <div>
                     <p className="text-sm text-gray-600">Cost Price</p>
                     <p className="text-2xl font-bold">
-                      ${Number(product.costPrice).toFixed(2)}
+                      {formatCurrency(product.costPrice)}
                     </p>
                   </div>
                 )}

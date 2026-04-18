@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/customers/[id]/pay-balance/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { CustomerService } from '@/services/customer.service';
@@ -28,7 +29,7 @@ export async function POST(
       payment,
     });
   } catch (error: any) {
-    console.error('Error paying balance:', error);
+    logger.error('Error paying balance:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid input', details: error.errors },

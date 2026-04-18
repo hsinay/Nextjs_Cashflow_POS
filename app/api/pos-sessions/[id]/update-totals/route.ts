@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/lib/auth';
 import { updateSessionTotalsSchema } from '@/lib/validations/pos-session.schema';
 import { posSessionService } from '@/services/pos-session.service';
@@ -58,7 +59,7 @@ export async function POST(
       message: 'Session totals updated',
     });
   } catch (error: any) {
-    console.error('Error updating POS session totals:', error);
+    logger.error('Error updating POS session totals:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update session totals' },
       { status: error.statusCode || 500 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/lib/auth';
 import { posSessionService } from '@/services/pos-session.service';
 import { getServerSession } from 'next-auth/next';
@@ -41,7 +42,7 @@ export async function GET(
       data: summary,
     });
   } catch (error: any) {
-    console.error('Error fetching POS session summary:', error);
+    logger.error('Error fetching POS session summary:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch session summary' },
       { status: error.statusCode || 500 }

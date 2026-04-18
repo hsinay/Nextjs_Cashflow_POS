@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to calculate price';
-    console.error('Price calculation error:', error);
+    logger.error('Price calculation error:', error);
     return NextResponse.json(
       { error: message },
       { status: 500 }

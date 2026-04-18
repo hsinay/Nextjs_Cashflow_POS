@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/sales-orders/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('GET /api/sales-orders error:', error);
+        logger.error('GET /api/sales-orders error:', error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        console.error('POST /api/sales-orders error:', error);
+        logger.error('POST /api/sales-orders error:', error);
         if (error.message?.includes('Not enough stock')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 409 });
         }

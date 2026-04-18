@@ -100,9 +100,26 @@ describe('PricelistService - calculateProductPrice', () => {
       mockPrisma.product.findUnique.mockResolvedValue(mockProduct as any);
       
       const mockRule = {
-        ...{ /* full rule */ },
+        id: 'rule-1',
+        name: '100% Discount',
+        pricelist: null,
+        pricelistId: 'pricelist-1',
+        priority: 1,
+        minQuantity: 1,
+        maxQuantity: null,
+        appliedTo: 'PRODUCT',
+        productId: 'product-1',
+        categoryId: null,
+        customerGroupId: null,
         calculationType: 'PERCENTAGE_DISCOUNT',
         discountPercentage: new Decimal('100'),
+        fixedPrice: null,
+        fixedDiscount: null,
+        formulaMargin: null,
+        formulaMarkup: null,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       mockPrisma.pricelist.findMany.mockResolvedValue([
@@ -387,7 +404,7 @@ describe('PricelistService - calculateProductPrice', () => {
         {
           id: 'pricelist-1',
           priority: 1,
-          rules: [lowPriorityRule, highPriorityRule],
+          rules: [highPriorityRule, lowPriorityRule],
         },
       ] as any);
 
@@ -528,8 +545,9 @@ describe('PricelistService - calculateProductPrice', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             isActive: true,
-            OR: expect.arrayContaining([
-              { startDate: null, endDate: null },
+            AND: expect.arrayContaining([
+              { OR: [{ startDate: null }, { startDate: { lte: expect.any(Date) } }] },
+              { OR: [{ endDate: null }, { endDate: { gte: expect.any(Date) } }] },
             ]),
           }),
         })

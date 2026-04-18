@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Credit Payment Detail API Routes
  * GET /api/credit-payments/[id] - Get payment details
@@ -47,7 +48,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: payment });
   } catch (error: unknown) {
-    console.error('[Credit Payment GET Detail]', error);
+    logger.error('[Credit Payment GET Detail]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -110,7 +111,7 @@ export async function PUT(
       }
     }
 
-    console.error('[Credit Payment PUT]', error);
+    logger.error('[Credit Payment PUT]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

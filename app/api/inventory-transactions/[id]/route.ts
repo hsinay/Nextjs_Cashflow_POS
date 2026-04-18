@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/inventory-transactions/[id]/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -33,7 +34,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: transaction }, { status: 200 });
     } catch (error) {
-        console.error(`GET /api/inventory-transactions/${params.id} error:`, error);
+        logger.error(`GET /api/inventory-transactions/${params.id} error:`, error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/ledger/trial-balance/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ success: true, data: report }, { status: 200 });
     } catch (error) {
-        console.error('GET /api/ledger/trial-balance error:', error);
+        logger.error('GET /api/ledger/trial-balance error:', error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

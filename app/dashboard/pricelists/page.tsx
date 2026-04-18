@@ -66,6 +66,7 @@ export default async function PricelistsPage() {
           actionLabel="Create First Pricelist"
           actionHref="/dashboard/pricelists/new"
         />
+      ) : (
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           <PricelistList pricelists={pricelists} />
         </div>

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from "@/lib/auth";
 import { updateExpenseCategorySchema } from "@/lib/validations/daybook.schema";
 import { expenseCategoryService } from "@/services/expense-category.service";
@@ -29,7 +30,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
-    console.error("Failed to fetch expense category:", error);
+    logger.error("Failed to fetch expense category:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -67,7 +68,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
-    console.error("Failed to update expense category:", error);
+    logger.error("Failed to update expense category:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -99,7 +100,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
-    console.error("Failed to delete expense category:", error);
+    logger.error("Failed to delete expense category:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

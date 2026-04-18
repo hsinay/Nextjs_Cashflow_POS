@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -38,7 +39,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ success: true, data: rule });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch rule';
-    console.error('Error fetching rule:', error);
+    logger.error('Error fetching rule:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -110,7 +111,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to update rule';
-    console.error('Error updating rule:', error);
+    logger.error('Error updating rule:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -151,7 +152,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to delete rule';
-    console.error('Error deleting rule:', error);
+    logger.error('Error deleting rule:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

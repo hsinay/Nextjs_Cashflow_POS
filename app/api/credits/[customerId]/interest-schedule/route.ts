@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Interest Schedule API Route
  * GET /api/credits/[customerId]/interest-schedule - Get interest and late fee schedule
@@ -45,7 +46,7 @@ export async function GET(
       );
     }
 
-    console.error('[Interest Schedule GET]', error);
+    logger.error('[Interest Schedule GET]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

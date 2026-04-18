@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createInvalidIDError, isValidUUID } from '@/lib/validation-utils';
@@ -49,7 +50,7 @@ export async function GET(
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch pricelist';
-    console.error('Error fetching pricelist:', error);
+    logger.error('Error fetching pricelist:', error);
     return NextResponse.json(
       { error: message },
       { status: 500 }
@@ -174,7 +175,7 @@ export async function PUT(
     }
 
     const message = error instanceof Error ? error.message : 'Failed to update pricelist';
-    console.error('Error updating pricelist:', error);
+    logger.error('Error updating pricelist:', error);
     return NextResponse.json(
       { error: message },
       { status: 500 }
@@ -224,7 +225,7 @@ export async function DELETE(
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to delete pricelist';
-    console.error('Error deleting pricelist:', error);
+    logger.error('Error deleting pricelist:', error);
     return NextResponse.json(
       { error: message },
       { status: 500 }

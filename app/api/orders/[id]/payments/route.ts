@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/orders/[id]/payments/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -32,7 +33,7 @@ export async function GET(
       data: { payments, summary },
     });
   } catch (error: any) {
-    console.error('Error fetching payments:', error);
+    logger.error('Error fetching payments:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
@@ -69,7 +70,7 @@ export async function POST(
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('Error creating payment:', error);
+    logger.error('Error creating payment:', error);
     
     // Handle validation errors
     if (error.errors) {

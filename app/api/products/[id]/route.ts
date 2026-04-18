@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/products/[id]/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -50,7 +51,7 @@ export async function GET(
       { status: 200 }
     );
   } catch (error) {
-    console.error('GET /api/products/[id] error:', error);
+    logger.error('GET /api/products/[id] error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -122,7 +123,7 @@ export async function PUT(
       { status: 200 }
     );
   } catch (error: any) {
-    console.error('PUT /api/products/[id] error:', error);
+    logger.error('PUT /api/products/[id] error:', error);
 
     // Handle specific errors
     if (error.message?.includes('not found')) {
@@ -192,7 +193,7 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error: any) {
-    console.error('DELETE /api/products/[id] error:', error);
+    logger.error('DELETE /api/products/[id] error:', error);
 
     if (error.message?.includes('not found')) {
       return NextResponse.json(

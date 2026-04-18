@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Credit Calculate Interest API Route
  * POST /api/credits/[customerId]/calculate-interest - Calculate and apply interest
@@ -34,7 +35,7 @@ export async function POST(
       { status: 200 }
     );
   } catch (error: unknown) {
-    console.error('[Calculate Interest POST]', error);
+    logger.error('[Calculate Interest POST]', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/sales-orders/[id]/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -35,7 +36,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: order }, { status: 200 });
     } catch (error) {
-        console.error(`GET /api/sales-orders/${params.id} error:`, error);
+        logger.error(`GET /api/sales-orders/${params.id} error:`, error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -75,7 +76,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ success: true, data: updatedOrder }, { status: 200 });
 
     } catch (error: any) {
-        console.error(`PUT /api/sales-orders/${params.id} error:`, error);
+        logger.error(`PUT /api/sales-orders/${params.id} error:`, error);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }
@@ -103,7 +104,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, message: 'Sales order deleted successfully' }, { status: 200 });
     } catch (error: any) {
-        console.error(`DELETE /api/sales-orders/${params.id} error:`, error);
+        logger.error(`DELETE /api/sales-orders/${params.id} error:`, error);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

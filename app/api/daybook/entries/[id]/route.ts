@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { authOptions } from "@/lib/auth";
 import { updateDayBookEntrySchema } from "@/lib/validations/daybook.schema";
 import { daybookService } from "@/services/daybook.service";
@@ -33,7 +34,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: entry });
   } catch (error) {
-    console.error("Failed to update entry:", error);
+    logger.error("Failed to update entry:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -65,7 +66,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, data: entry });
   } catch (error) {
-    console.error("Failed to delete entry:", error);
+    logger.error("Failed to delete entry:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

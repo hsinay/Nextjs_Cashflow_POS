@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * API Route: POST /api/pos/transactions-integrated
  * 
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('[POS Integration Error]', error);
+    logger.error('[POS Integration Error]', error);
 
     // Handle specific error types
     if (error.code === 'P2002') {

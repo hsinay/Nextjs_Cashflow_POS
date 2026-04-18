@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -64,7 +65,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to create rule';
-    console.error('Error creating rule:', error);
+    logger.error('Error creating rule:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/api/products/route.ts
 
 import { authOptions } from '@/lib/auth';
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('GET /api/products error:', error);
+    logger.error('GET /api/products error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('POST /api/products error:', error);
+    logger.error('POST /api/products error:', error);
 
     // Handle specific errors
     if (error.message?.includes('already in use')) {
