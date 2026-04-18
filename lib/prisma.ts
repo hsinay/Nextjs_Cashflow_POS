@@ -10,12 +10,30 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient }
 export const prisma =
   globalForPrisma.prisma ||
   (() => {
-    if (process.env.DATABASE_URL) {
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-      const adapter = new PrismaNeon(pool)
-      return new PrismaClient({ adapter, log: ['error'] })
+    if (typeof window !== 'undefined') {
+      return new PrismaClient()
     }
-    return new PrismaClient({ log: ['error'] })
+    
+    // Fallback for Next.js build time environments where env might not be loaded yet
+    if (!process.env.DATABASE_URL) {
+      try {
+        require('dotenv').config({ path: '.env.local' });
+        require('dotenv').config({ path: '.env' });
+      } catch (e) {
+        // Ignore if dotenv is not available
+      }
+    }
+    
+    const connectionString = process.env.DATABASE_URL
+    
+    if (!connectionString) {
+      console.warn('DATABASE_URL is not defined in environment variables')
+      return new PrismaClient({ log: ['error'] })
+    }
+
+    const pool = new Pool({ connectionString })
+    const adapter = new PrismaNeon(pool)
+    return new PrismaClient({ adapter, log: ['error'] })
   })()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
