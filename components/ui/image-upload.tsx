@@ -1,10 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 import { Input } from '@/components/ui/input';
 import { Upload, X } from 'lucide-react';
 import Image from 'next/image';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ImageUploadProps {
   value: string;
@@ -19,20 +20,33 @@ export function ImageUpload({
   onChange,
   onImageUpload,
   placeholder = 'https://example.com/image.jpg',
-  description = 'JPG or PNG (max. 5MB)',
+  description = 'JPG, PNG, or WebP (max. 5MB)',
 }: ImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>(value || '');
+  const objectUrlRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPreviewUrl(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
+    };
+  }, []);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     // Validate file type
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setError('Only JPG and PNG files are allowed');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Only JPG, PNG, and WebP files are allowed');
       return;
     }
 
@@ -43,15 +57,11 @@ export function ImageUpload({
     }
 
     setError(null);
-
-    // Create local preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setPreviewUrl(result);
-      onChange(result);
-    };
-    reader.readAsDataURL(file);
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+    objectUrlRef.current = URL.createObjectURL(file);
+    setPreviewUrl(objectUrlRef.current);
 
     // If server upload handler provided, use it
     if (onImageUpload) {
@@ -62,10 +72,11 @@ export function ImageUpload({
         onChange(uploadedUrl);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Upload failed');
-        // Keep the local preview on error
       } finally {
         setIsUploading(false);
       }
+    } else {
+      setError('Image upload is not configured');
     }
 
     // Reset file input
@@ -75,6 +86,10 @@ export function ImageUpload({
   };
 
   const handleRemove = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
     setPreviewUrl('');
     onChange('');
     setError(null);
@@ -118,7 +133,7 @@ export function ImageUpload({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png"
+          accept="image/jpeg,image/png,image/webp"
           onChange={handleFileSelect}
           disabled={isUploading}
           className="hidden"
@@ -149,7 +164,13 @@ export function ImageUpload({
         <div className="space-y-2">
           <div className="relative w-full h-48 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
             <Image
-              src={previewUrl}
+              src={getOptimizedImageUrl(previewUrl, {
+                width: 720,
+                height: 480,
+                quality: 80,
+                format: 'auto',
+                crop: 'at_max',
+              })}
               alt="Preview"
               fill
               className="object-cover"

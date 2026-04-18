@@ -4,6 +4,18 @@ import { prisma } from '@/lib/prisma';
 import { createCategorySchema, updateCategorySchema } from '@/lib/validations/category.schema';
 import { Category, CategoryTreeNode, CreateCategoryInput, UpdateCategoryInput } from '@/types/category.types';
 
+function normalizeImageUrl(imageUrl?: string | null): string | null {
+  if (!imageUrl) {
+    return null;
+  }
+
+  if (imageUrl.startsWith('data:')) {
+    throw new Error('Base64 image payloads are not allowed');
+  }
+
+  return imageUrl;
+}
+
 /**
  * Recursively build tree structure from flat categories
  */
@@ -56,16 +68,16 @@ async function checkCircularReference(categoryId: string, newParentId: string | 
 export async function getAllCategories(flat: boolean = false): Promise<Category[] | CategoryTreeNode[]> {
   try {
     const categories = await prisma.category.findMany({
-      include: {
-        children: {
-          include: {
-            children: {
-              include: {
-                children: true,
-              },
-            },
-          },
-        },
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        description: true,
+        imageUrl: true,
+        parentCategoryId: true,
+        deletedAt: true,
+        createdAt: true,
+        updatedAt: true,
       },
       orderBy: { name: 'asc' },
     });
@@ -144,7 +156,7 @@ export async function createCategory(data: CreateCategoryInput): Promise<Categor
         name: validatedData.name,
         description: validatedData.description || null,
         parentCategoryId: validatedData.parentCategoryId || null,
-        imageUrl: validatedData.imageUrl || null,
+        imageUrl: normalizeImageUrl(validatedData.imageUrl),
       },
       include: {
         parent: true,
@@ -219,7 +231,7 @@ export async function updateCategory(id: string, data: UpdateCategoryInput): Pro
         ...(validatedData.name !== undefined && { name: validatedData.name }),
         ...(validatedData.description !== undefined && { description: validatedData.description }),
         ...(validatedData.parentCategoryId !== undefined && { parentCategoryId: validatedData.parentCategoryId }),
-        ...(validatedData.imageUrl !== undefined && { imageUrl: validatedData.imageUrl }),
+        ...(validatedData.imageUrl !== undefined && { imageUrl: normalizeImageUrl(validatedData.imageUrl) }),
       },
       include: {
         parent: true,

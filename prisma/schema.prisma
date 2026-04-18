@@ -375,7 +375,6 @@ model Product {
 
   // Relations
   category             Category            @relation(fields: [categoryId], references: [id])
-  images               Image[]
   variants             ProductVariant[]
   salesOrderItems      SalesOrderItem[]
   purchaseOrderItems   PurchaseOrderItem[]
@@ -416,21 +415,6 @@ model InventoryTransaction {
   @@index([type])
   @@index([referenceId])
   @@map("inventory_transactions")
-}
-
-model Image {
-  id        String    @id @default(uuid())
-  productId String
-  url       String
-  altText   String?
-  isPrimary Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@map("images")
 }
 
 model ProductVariant {

@@ -90,6 +90,25 @@ export function CategoryForm({
     fetchParentCategories();
   }, [isEditing, defaultValues?.id]);
 
+  const uploadCategoryImage = async (file: File): Promise<string> => {
+    const payload = new FormData();
+    payload.append('file', file);
+    payload.append('folder', '/cashflow-pos/categories');
+
+    const response = await fetch('/api/uploads/image', {
+      method: 'POST',
+      body: payload,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to upload image');
+    }
+
+    return result.data.url as string;
+  };
+
   async function handleSubmit(formData: any): Promise<void> {
     setError(null);
     setIsLoading(true);
@@ -150,7 +169,7 @@ export function CategoryForm({
         </Alert>
       )}
 
-      <Form {...form}>
+      <Form form={form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           {/* Name Field */}
           <FormField
@@ -239,8 +258,9 @@ export function CategoryForm({
                   <ImageUpload
                     value={field.value || ''}
                     onChange={(url) => field.onChange(url)}
+                    onImageUpload={uploadCategoryImage}
                     placeholder="https://example.com/image.jpg"
-                    description="JPG or PNG (max. 5MB)"
+                    description="JPG, PNG, or WebP (max. 5MB)"
                   />
                 </FormControl>
                 <FormMessage />

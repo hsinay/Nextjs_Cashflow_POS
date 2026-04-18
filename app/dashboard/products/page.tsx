@@ -43,8 +43,35 @@ async function getProducts(searchParams: ProductsPageProps['searchParams']) {
     const [rawProducts, total] = await Promise.all([ // Renamed to rawProducts
       prisma.product.findMany({
         where: whereClause,
-        include: {
-          category: true,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          sku: true,
+          barcode: true,
+          imageUrl: true,
+          price: true,
+          costPrice: true,
+          stockQuantity: true,
+          reorderLevel: true,
+          taxRate: true,
+          isActive: true,
+          categoryId: true,
+          aiTags: true,
+          visionEmbedding: true,
+          createdAt: true,
+          updatedAt: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              imageUrl: true,
+              parentCategoryId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -55,15 +82,24 @@ async function getProducts(searchParams: ProductsPageProps['searchParams']) {
       prisma.product.count({ where: whereClause }),
     ]);
 
-    const products = rawProducts.map(product => ({
-        ...product,
-        price: product.price.toNumber(),
-        costPrice: product.costPrice !== null ? product.costPrice.toNumber() : null,
-        taxRate: product.taxRate !== null ? product.taxRate.toNumber() : null,
-        // Add other Decimal fields if necessary
+    const products = rawProducts.map((product) => ({
+      ...product,
+      price: product.price.toNumber(),
+      costPrice: product.costPrice !== null ? product.costPrice.toNumber() : null,
+      taxRate: product.taxRate !== null ? product.taxRate.toNumber() : null,
+      visionEmbedding: product.visionEmbedding ?? null,
     }));
 
     const categories = await prisma.category.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        parentCategoryId: true,
+        imageUrl: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       orderBy: {
         name: 'asc',
       },

@@ -7,7 +7,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
+import { formatCurrency } from '@/lib/currency';
 import { useCurrency } from '@/lib/currency-context';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 import { PaymentDetailInput } from '@/types/pos-payment.types';
 import { POSSession } from '@/types/pos.types';
 import { Category, Customer, Product } from '@prisma/client';
@@ -76,7 +78,7 @@ export function POSClient({ initialSession, products, categories, customers: _cu
     const [favoriteProducts, setFavoriteProducts] = useState<string[]>([]);
 
     // Phase 3: Pricelist State
-    const [isCalculatingPrices, setIsCalculatingPrices] = useState(false);
+    const [, setIsCalculatingPrices] = useState(false);
     const [priceCache, setPriceCache] = useState<Record<string, Map<number, any>>>({});
     const [availablePricelists, setAvailablePricelists] = useState<Pricelist[]>([]);
     const [selectedPricelist, setSelectedPricelist] = useState<string | null>(null);
@@ -516,7 +518,7 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                             <span className="text-xs font-medium bg-red-100 text-red-700 px-2 py-1 rounded">
                                 No Session
                             </span>
-                            <Button onClick={() => handleOpenSession(0)} size="xs" className="bg-green-600 hover:bg-green-700 h-6">
+                            <Button onClick={() => handleOpenSession(0)} size="sm" className="bg-green-600 hover:bg-green-700 h-6 px-2 py-1 text-xs">
                                 Open Session
                             </Button>
                         </div>
@@ -526,7 +528,7 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                                 Session: <span className="font-bold text-green-600">{session.id.substring(0, 8)}</span>
                             </span>
                             <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded font-medium">Active</span>
-                            <Button onClick={() => handleCloseSession(0)} variant="destructive" size="xs" className="h-6">
+                            <Button onClick={() => handleCloseSession(0)} variant="destructive" size="sm" className="h-6 px-2 py-1 text-xs">
                                 Close
                             </Button>
                         </div>
@@ -680,7 +682,9 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                             </div>
                         ) : (
                             <div className="flex justify-center">
-                                <QrCode className="w-4 h-4 text-gray-600" title="Barcode Scanner" />
+                                <div title="Barcode Scanner">
+                                    <QrCode className="w-4 h-4 text-gray-600" />
+                                </div>
                             </div>
                         )}
                     </div>
@@ -988,7 +992,9 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                                 {sidebarView === 'favorites' && (
                                     <>
                                         {favoriteProducts.length === 0 ? (
-                                            <Heart className="w-4 h-4 text-gray-400" title="No favorites" />
+                                            <div title="No favorites">
+                                                <Heart className="w-4 h-4 text-gray-400" />
+                                            </div>
                                         ) : (
                                             favoriteProducts.slice(0, 6).map(productId => {
                                                 const product = products.find(p => p.id === productId);
@@ -1205,9 +1211,16 @@ function ProductCard({ product, onAddToCart, isFavorite = false, onToggleFavorit
             <div className="relative bg-gray-100 h-32 flex items-center justify-center overflow-hidden">
                 {product.imageUrl ? (
                     <img
-                        src={product.imageUrl}
+                        src={getOptimizedImageUrl(product.imageUrl, {
+                            width: 320,
+                            height: 320,
+                            quality: 75,
+                            format: 'auto',
+                            crop: 'at_max',
+                        })}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                        loading="lazy"
                     />
                 ) : (
                     <div className="flex items-center justify-center text-gray-400">
@@ -1256,9 +1269,16 @@ function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
                 {item.product.imageUrl ? (
                     <div className="flex-shrink-0 w-12 h-12 bg-gray-200 rounded border border-gray-300 overflow-hidden">
                         <img
-                            src={item.product.imageUrl}
+                            src={getOptimizedImageUrl(item.product.imageUrl, {
+                                width: 96,
+                                height: 96,
+                                quality: 75,
+                                format: 'auto',
+                                crop: 'at_max',
+                            })}
                             alt={item.product.name}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                         />
                     </div>
                 ) : (

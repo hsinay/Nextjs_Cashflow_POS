@@ -51,6 +51,7 @@ const barcodeSchema = z
 const imageUrlSchema = z
   .string()
   .url('Image URL must be a valid URL')
+  .refine((value) => !value.startsWith('data:'), 'Base64 image payloads are not allowed')
   .optional()
   .nullable();
 

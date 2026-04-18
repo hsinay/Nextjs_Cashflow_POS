@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { Category } from '@/types/category.types';
 import { useRouter } from 'next/navigation';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 
 interface CategoryTreeProps {
   categories: Category[];
@@ -130,7 +131,13 @@ export function CategoryTree({
               {category.imageUrl ? (
                 <div className="flex-shrink-0 w-10 h-10 rounded-md overflow-hidden bg-gray-100">
                   <Image
-                    src={category.imageUrl}
+                    src={getOptimizedImageUrl(category.imageUrl, {
+                      width: 80,
+                      height: 80,
+                      quality: 75,
+                      format: 'auto',
+                      crop: 'at_max',
+                    })}
                     alt={category.name}
                     width={40}
                     height={40}

@@ -13,8 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { formatCurrency } from '@/lib/currency';
+import { getOptimizedImageUrl } from '@/lib/image-url';
+import { prisma } from '@/lib/prisma';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import Image from 'next/image';
@@ -30,7 +31,31 @@ interface ProductDetailPageProps {
 async function getProduct(id: string) {
   return prisma.product.findUnique({
     where: { id },
-    include: { category: true },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      sku: true,
+      barcode: true,
+      imageUrl: true,
+      price: true,
+      costPrice: true,
+      stockQuantity: true,
+      reorderLevel: true,
+      taxRate: true,
+      isActive: true,
+      categoryId: true,
+      aiTags: true,
+      visionEmbedding: true,
+      createdAt: true,
+      updatedAt: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
   });
 }
 
@@ -151,10 +176,17 @@ export default async function ProductDetailPage({
               <CardContent className="pt-6">
                 <div className="relative w-full h-96 rounded-lg overflow-hidden bg-gray-100">
                   <Image
-                    src={product.imageUrl}
+                    src={getOptimizedImageUrl(product.imageUrl, {
+                      width: 1200,
+                      height: 900,
+                      quality: 82,
+                      format: 'auto',
+                      crop: 'at_max',
+                    })}
                     alt={product.name}
                     fill
                     className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 66vw"
                   />
                 </div>
               </CardContent>
@@ -182,13 +214,13 @@ export default async function ProductDetailPage({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Selling Price</p>
-                  <p className="text-2xl font-bold">{formatCurrency(product.price)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(Number(product.price))}</p>
                 </div>
                 {product.costPrice && (
                   <div>
                     <p className="text-sm text-gray-600">Cost Price</p>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(product.costPrice)}
+                      {formatCurrency(Number(product.costPrice))}
                     </p>
                   </div>
                 )}
