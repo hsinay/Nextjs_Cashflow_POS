@@ -7,12 +7,12 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrency } from '@/lib/currency-context';
 import { PaymentDetailInput } from '@/types/pos-payment.types';
 import { POSSession } from '@/types/pos.types';
 import { Category, Customer, Product } from '@prisma/client';
-import { ChevronLeft, ChevronRight, Clock, Filter, Heart, Image as ImageIcon, Minus, Plus, QrCode, Search, ShoppingCart, Trash2, X, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight, Clock, Filter, Heart, Image as ImageIcon, Layers, Minus, Plus, QrCode, Search, ShoppingCart, Trash2, X, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { POSPaymentPanel } from './pos-payment-panel';
 import { PricelistSelector } from './pricelist-selector';
 
@@ -66,8 +66,10 @@ export function POSClient({ initialSession, products, categories, customers: _cu
     // UI State
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [sidebarExpanded, setSidebarExpanded] = useState(true);
+    const [sidebarAutoHide, setSidebarAutoHide] = useState(false);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [sidebarView, setSidebarView] = useState<'categories' | 'recent' | 'favorites'>('categories');
+    const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Phase 2: Recent & Favorites State
     const [recentProducts, setRecentProducts] = useState<string[]>([]);
@@ -91,6 +93,18 @@ export function POSClient({ initialSession, products, categories, customers: _cu
     });
 
     const { toast } = useToast();
+    const { formatCurrency } = useCurrency();
+
+    // Auto-hide sidebar helpers
+    const handleAutoHideEnter = () => {
+        if (!sidebarAutoHide) return;
+        if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
+        setSidebarOpen(true);
+    };
+    const handleAutoHideLeave = () => {
+        if (!sidebarAutoHide) return;
+        autoHideTimerRef.current = setTimeout(() => setSidebarOpen(false), 300);
+    };
 
     // Calculate price based on pricelist for a product and quantity
     const calculatePrice = async (
@@ -518,15 +532,47 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                         </div>
                     )}
                 </div>
-                <div className="text-xs text-gray-500">
-                    {new Date().toLocaleString()}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => {
+                            const next = !sidebarAutoHide;
+                            setSidebarAutoHide(next);
+                            if (next) setSidebarOpen(false); // hide sidebar immediately
+                            else setSidebarOpen(true);       // restore on disable
+                        }}
+                        title={sidebarAutoHide ? 'Disable sidebar auto-hide' : 'Enable sidebar auto-hide (hover left edge to reveal)'}
+                        className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${
+                            sidebarAutoHide
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                        }`}
+                    >
+                        <Layers className="w-3 h-3" />
+                        <span className="hidden sm:inline">{sidebarAutoHide ? 'Auto-hide ON' : 'Auto-hide'}</span>
+                    </button>
+                    <div className="text-xs text-gray-500">
+                        {new Date().toLocaleString()}
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 flex gap-0 overflow-hidden">
+            <div className="flex-1 flex gap-0 overflow-hidden relative">
+                {/* AUTO-HIDE trigger strip — visible when autohide is ON and sidebar is closed */}
+                {sidebarAutoHide && !sidebarOpen && (
+                    <div
+                        className="w-3 flex-shrink-0 bg-slate-200 hover:bg-blue-400 border-r border-slate-300 cursor-e-resize transition-colors z-30"
+                        onMouseEnter={handleAutoHideEnter}
+                        title="Hover to reveal sidebar"
+                    />
+                )}
+
                 {/* LEFT SIDEBAR - Categories & Filters */}
                 {sidebarOpen && (
-                <div className={`${sidebarExpanded ? 'w-64' : 'w-16'} bg-white border-r flex flex-col overflow-hidden transition-all duration-300`}>
+                <div
+                    className={`${sidebarAutoHide ? 'absolute left-0 top-0 h-full z-40 shadow-2xl' : ''} ${sidebarExpanded ? 'w-64' : 'w-16'} bg-white border-r flex flex-col overflow-hidden transition-all duration-300`}
+                    onMouseEnter={sidebarAutoHide ? handleAutoHideEnter : undefined}
+                    onMouseLeave={sidebarAutoHide ? handleAutoHideLeave : undefined}
+                >
                     {/* Sidebar Header with View Tabs */}
                     <div className="flex-shrink-0 border-b p-3 flex items-center justify-between gap-2">
                         {sidebarExpanded ? (
@@ -967,8 +1013,8 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                 </div>
                 )}
 
-                {/* Sidebar Toggle Button (when closed) */}
-                {!sidebarOpen && (
+                {/* Sidebar Toggle Button (when closed, non-autohide mode) */}
+                {!sidebarOpen && !sidebarAutoHide && (
                     <Button
                         onClick={() => setSidebarOpen(true)}
                         variant="ghost"

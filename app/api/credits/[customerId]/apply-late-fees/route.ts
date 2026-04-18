@@ -38,7 +38,7 @@ export async function POST(
         success: true,
         data: {
           totalFeesApplied,
-          message: `Late fees applied: Rs. ${totalFeesApplied.toFixed(2)}`,
+          message: `Late fees applied: ${totalFeesApplied.toFixed(2)}`,
         },
       },
       { status: 200 }

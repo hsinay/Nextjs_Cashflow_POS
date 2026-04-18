@@ -33,7 +33,7 @@ export async function GET(
         summary: {
           totalInterestCharges: interestSchedule.totalInterest,
           transactionsWithInterest: interestSchedule.appliedCount,
-          message: `${interestSchedule.appliedCount} transactions have accrued Rs. ${interestSchedule.totalInterest.toFixed(2)} in interest`,
+          message: `${interestSchedule.appliedCount} transactions have accrued ${interestSchedule.totalInterest.toFixed(2)} in interest`,
         },
         schedule: interestSchedule.transactions,
       },
