@@ -11,7 +11,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { usePOSSession } from '@/hooks/use-pos-session';
 import { Colors } from '@/lib/design-tokens';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, parseLocaleAmount } from '@/lib/currency';
 import { Customer } from '@/types/customer.types';
 import { ConcretePaymentMethod } from '@/types/payment.types';
 import {
@@ -67,7 +67,7 @@ export function POSPaymentPanel({
   }, [isOpen]);
 
   // Calculate change (for cash)
-  const paidNum = parseFloat(paidAmount);
+  const paidNum = parseLocaleAmount(paidAmount);
   const changeAmount = Math.max(0, paidNum - orderTotal);
 
   // Validate payment - pure function without state mutations
