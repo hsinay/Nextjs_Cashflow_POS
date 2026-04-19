@@ -75,6 +75,47 @@ export function getCurrencyDecimals(): number {
   return getCurrencyConfig().decimals;
 }
 
+/**
+ * Parses a locale-formatted amount string back to a number.
+ * Handles thousands separators and decimal points based on current locale.
+ */
+export function parseLocaleAmount(value: string): number {
+  if (!value) return 0;
+
+  const config = getCurrencyConfig();
+
+  const numberFormatter = new Intl.NumberFormat(config.locale);
+  const localizedDigits = new Intl.NumberFormat(config.locale, { useGrouping: false })
+    .format(9876543210)
+    .split('')
+    .reverse();
+
+  const digitMap = new Map(localizedDigits.map((digit, index) => [digit, String(index)]));
+  const separatorParts = numberFormatter.formatToParts(12345.6);
+  const groupSeparator = separatorParts.find((part) => part.type === 'group')?.value ?? ',';
+  const decimalSeparator = separatorParts.find((part) => part.type === 'decimal')?.value ?? '.';
+
+  let clean = value.replace(config.symbol, '').trim();
+
+  clean = clean
+    .split('')
+    .map((char) => digitMap.get(char) ?? char)
+    .join('');
+
+  if (groupSeparator) {
+    clean = clean.split(groupSeparator).join('');
+  }
+
+  if (decimalSeparator && decimalSeparator !== '.') {
+    clean = clean.replace(decimalSeparator, '.');
+  }
+
+  clean = clean.replace(/[^\d.-]/g, '');
+
+  const result = Number.parseFloat(clean);
+  return isNaN(result) ? 0 : result;
+}
+
 export function getAvailableCurrencies() {
   const currencyNames: Record<CurrencyType, string> = {
     INR: 'Indian Rupee',
@@ -112,6 +153,7 @@ const currencyService = {
   getCurrencyConfig,
   getAvailableCurrencies,
   setActiveCurrency,
+  parseLocaleAmount,
   ACTIVE_CURRENCY,
 };
 

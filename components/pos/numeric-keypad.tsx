@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getCurrencyLocale } from '@/lib/currency';
 import { Delete } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface NumericKeypadProps {
   value: string;
@@ -23,252 +23,179 @@ export function NumericKeypad({
   disabled = false,
   placeholder = '0.00',
 }: NumericKeypadProps) {
-  const [displayValue, setDisplayValue] = useState(value);
-  const [isFocused, setIsFocused] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
+  const [rawValue, setRawValue] = useState('0');
 
-  useEffect(() => {
-    setDisplayValue(value);
-  }, [value]);
+  const normalizeRawValue = (input: string): string => {
+    const cleaned = input.replace(/[^0-9.]/g, '');
+    const [integerPartRaw = '', ...decimalParts] = cleaned.split('.');
+    const hasDecimal = cleaned.includes('.');
+    const decimalPart = decimalParts.join('').slice(0, 2);
 
-  /**
-   * Convert display value (e.g., "52.50") to total cents (e.g., 5250)
-   */
-  const getCents = (v: string): number => {
-    const num = parseFloat(v);
-    return isNaN(num) ? 0 : Math.round(num * 100);
+    const normalizedInteger = integerPartRaw.replace(/^0+(?=\d)/, '') || '0';
+
+    if (hasDecimal) {
+      return `${normalizedInteger}.${decimalPart}`;
+    }
+
+    return normalizedInteger;
   };
 
-  /**
-   * Convert cents (e.g., 5250) to formatted display (e.g., "52.50")
-   */
-  const formatFromCents = (cents: number): string => {
-    if (isNaN(cents) || cents < 0) return '0.00';
-    const amount = cents / 100;
-    return amount.toLocaleString(getCurrencyLocale(), {
+  const toEditableValue = (input: string): string => {
+    const normalized = normalizeRawValue(input);
+
+    if (!normalized.includes('.')) {
+      return normalized;
+    }
+
+    const [integerPart, decimalPart = ''] = normalized.split('.');
+    const trimmedDecimalPart = decimalPart.replace(/0+$/, '');
+
+    if (trimmedDecimalPart.length === 0) {
+      return integerPart;
+    }
+
+    return `${integerPart}.${trimmedDecimalPart}`;
+  };
+
+  const formatValue = (input: string): string => {
+    const numericValue = Number.parseFloat(input);
+
+    if (Number.isNaN(numericValue) || numericValue < 0) {
+      return '0.00';
+    }
+
+    return numericValue.toLocaleString(getCurrencyLocale(), {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-      useGrouping: true, // Show thousands separator
+      useGrouping: true,
     });
   };
 
-  /**
-   * Odoo-like digit handling:
-   * - Typing replaces the integer part, building up the value
-   * - Maximum 2 decimal places
-   */
+  useEffect(() => {
+    if (!isFocused) {
+      setRawValue(toEditableValue(value));
+    }
+  }, [isFocused, value]);
+
+  const commitValue = (nextRawValue: string) => {
+    const normalized = normalizeRawValue(nextRawValue);
+    setRawValue(normalized);
+    onValueChange(normalized);
+  };
+
   const handleDigit = (digit: string) => {
     if (disabled) return;
 
-    const currentCents = getCents(displayValue);
-    
-    // Prevent more than 10 digits total (999,999,999.99)
-    if (currentCents.toString().length >= 10 && currentCents !== 0) {
+    if (rawValue.includes('.')) {
+      const [integerPart, decimalPart = ''] = rawValue.split('.');
+      if (decimalPart.length >= 2) return;
+      commitValue(`${integerPart}.${decimalPart}${digit}`);
       return;
     }
 
-    // Build new value by appending digit to cents
-    const newCents = currentCents === 0 
-      ? parseInt(digit, 10) 
-      : currentCents * 10 + parseInt(digit, 10);
-
-    // Cap at 2 decimal places (don't exceed cents limit)
-    if (newCents > 9999999999) return; // ~100M limit
-
-    const formatted = formatFromCents(newCents);
-    setDisplayValue(formatted);
-    onValueChange(formatted);
+    commitValue(rawValue === '0' ? digit : `${rawValue}${digit}`);
   };
 
-  /**
-   * Quick append of 00 (useful for rupee amounts)
-   * e.g., "5" -> "500.00"
-   */
   const handle00 = () => {
-    if (disabled) return;
-    const currentCents = getCents(displayValue);
-    if (currentCents === 0) return;
+    if (disabled || rawValue === '0') return;
 
-    const newCents = currentCents * 100;
-    if (newCents > 9999999999) return;
+    if (rawValue.includes('.')) {
+      const [integerPart, decimalPart = ''] = rawValue.split('.');
+      if (decimalPart.length >= 2) return;
+      commitValue(`${integerPart}.${decimalPart}0`);
+      return;
+    }
 
-    const formatted = formatFromCents(newCents);
-    setDisplayValue(formatted);
-    onValueChange(formatted);
+    commitValue(`${rawValue}00`);
   };
 
-  /**
-   * Odoo-like backspace: Remove rightmost digit
-   * "52.50" -> "5.25" -> "0.52" -> "0.05" -> "0.00"
-   */
   const handleBackspace = () => {
     if (disabled) return;
 
-    const centsValue = getCents(displayValue);
-    const centsString = centsValue.toString();
-
-    // If at 0 or single digit, reset to 0.00
-    if (centsValue === 0 || centsString.length <= 1) {
-      setDisplayValue('0.00');
-      onValueChange('0.00');
+    if (rawValue.length <= 1) {
+      commitValue('0');
       return;
     }
 
-    // Remove last digit from cents
-    const newCentsString = centsString.slice(0, -1);
-    const newCents = parseInt(newCentsString, 10);
-    const formatted = formatFromCents(newCents);
+    const nextRawValue = rawValue.slice(0, -1);
+    if (nextRawValue === '' || nextRawValue === '.') {
+      commitValue('0');
+      return;
+    }
 
-    setDisplayValue(formatted);
-    onValueChange(formatted);
+    commitValue(nextRawValue);
   };
 
-  /**
-   * Clear to 0.00 (Delete key or clear button)
-   */
   const handleClear = () => {
     if (disabled) return;
-    setDisplayValue('0.00');
-    onValueChange('0.00');
+    commitValue('0');
   };
 
-  /**
-   * Handle decimal point input
-   * Activates the decimal part for paise entry
-   */
   const handleDecimalPoint = () => {
-    if (disabled) return;
-    
-    // Just focus the input at the decimal position
-    if (inputRef.current) {
-      const decimalIndex = displayValue.indexOf('.');
-      if (decimalIndex !== -1) {
-        // Move cursor right after decimal point
-        inputRef.current.setSelectionRange(decimalIndex + 1, decimalIndex + 1);
-        inputRef.current.focus();
-      }
-    }
+    if (disabled || rawValue.includes('.')) return;
+    commitValue(`${rawValue}.`);
+    inputRef.current?.focus();
   };
 
-  /**
-   * Handle direct input (paste, manual typing)
-   * Odoo-like: Accept only digits and decimal point
-   */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
-
-    let rawValue = e.target.value;
-    
-    // Extract only numbers and decimal point
-    const parts = rawValue.split('.');
-    const integerPart = parts[0].replace(/[^0-9]/g, '');
-    const decimalPart = parts[1] ? parts[1].replace(/[^0-9]/g, '').slice(0, 2) : '';
-
-    // Reconstruct the value
-    const cleanedValue = decimalPart 
-      ? `${integerPart}.${decimalPart}`
-      : integerPart || '0';
-
-    // Parse and format through cents to ensure consistency
-    const tempNum = parseFloat(cleanedValue);
-    const cents = isNaN(tempNum) ? 0 : Math.round(tempNum * 100);
-    const formatted = formatFromCents(cents);
-
-    setDisplayValue(formatted);
-    onValueChange(formatted);
-    
-    // Maintain cursor position
-    setCursorPosition(e.target.selectionStart || 0);
+    commitValue(e.target.value);
   };
 
-  /**
-   * Handle focus state
-   */
   const handleFocus = () => {
     setIsFocused(true);
-    if (inputRef.current && displayValue === '0.00') {
-      // Auto-select with proper visual feedback
-      inputRef.current.setSelectionRange(0, displayValue.length);
-    }
+    requestAnimationFrame(() => {
+      inputRef.current?.setSelectionRange(rawValue.length, rawValue.length);
+    });
   };
 
   const handleBlur = () => {
     setIsFocused(false);
-    // Ensure proper formatting on blur
-    const formatted = formatFromCents(getCents(displayValue));
-    if (formatted !== displayValue) {
-      setDisplayValue(formatted);
-      onValueChange(formatted);
-    }
+    const normalized = normalizeRawValue(rawValue);
+    setRawValue(normalized);
+    onValueChange(formatValue(normalized));
   };
 
-  /**
-   * Keyboard support with Odoo-like behavior
-   */
   useEffect(() => {
     if (!isFocused) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (disabled) return;
 
-      const key = e.key;
-
-      // Number keys (0-9)
-      if (key >= '0' && key <= '9') {
-        e.preventDefault();
-        handleDigit(key);
-        return;
-      }
-
-      // Decimal point
-      if (key === '.' || key === ',') {
-        e.preventDefault();
-        handleDecimalPoint();
-        return;
-      }
-
-      // Backspace (Odoo behavior: remove rightmost digit)
-      if (key === 'Backspace') {
-        e.preventDefault();
-        handleBackspace();
-        return;
-      }
-
-      // Delete (Odoo behavior: clear all)
-      if (key === 'Delete') {
-        e.preventDefault();
-        handleClear();
-        return;
-      }
-
-      // Enter (confirm)
-      if (key === 'Enter') {
+      if (e.key === 'Enter') {
         e.preventDefault();
         onConfirm?.();
         return;
       }
 
-      // Escape (cancel)
-      if (key === 'Escape') {
+      if (e.key === 'Escape') {
         e.preventDefault();
         onCancel?.();
-        return;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [disabled, onConfirm, onCancel]);
+  }, [disabled, isFocused, onCancel, onConfirm]);
+
+  const inputValue = useMemo(() => {
+    if (isFocused) {
+      return rawValue;
+    }
+
+    return formatValue(rawValue);
+  }, [isFocused, rawValue]);
 
   return (
     <div className="space-y-3">
-      {/* Display Input */}
       <div className="relative">
         <Input
           ref={inputRef}
           type="text"
-          value={displayValue}
+          inputMode="decimal"
+          value={inputValue}
           onChange={handleInputChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -278,9 +205,7 @@ export function NumericKeypad({
         />
       </div>
 
-      {/* Keypad Grid */}
       <div className="grid grid-cols-4 gap-2">
-        {/* Row 1: 7, 8, 9, DEL */}
         <Button
           onClick={() => handleDigit('7')}
           disabled={disabled}
@@ -314,7 +239,6 @@ export function NumericKeypad({
           <Delete className="w-5 h-5" />
         </Button>
 
-        {/* Row 2: 4, 5, 6, . */}
         <Button
           onClick={() => handleDigit('4')}
           disabled={disabled}
@@ -348,7 +272,6 @@ export function NumericKeypad({
           CLR
         </Button>
 
-        {/* Row 3: 1, 2, 3, CLR */}
         <Button
           onClick={() => handleDigit('1')}
           disabled={disabled}
@@ -373,8 +296,15 @@ export function NumericKeypad({
         >
           3
         </Button>
-        <div /> {/* Empty cell for layout */}
-        {/* Row 4: 0, 00, Blank (for layout) */}
+        <Button
+          onClick={handleDecimalPoint}
+          disabled={disabled}
+          variant="outline"
+          className="h-12 text-lg font-semibold hover:bg-blue-50"
+        >
+          .
+        </Button>
+
         <Button
           onClick={() => handleDigit('0')}
           disabled={disabled}
@@ -387,13 +317,13 @@ export function NumericKeypad({
           onClick={handle00}
           disabled={disabled}
           variant="outline"
-          className="h-12 text-lg font-semibold hover:bg-blue-50 col-span-2"
+          className="h-12 text-lg font-semibold hover:bg-blue-50"
         >
           00
         </Button>
+        <div />
       </div>
 
-      {/* Keyboard Hint */}
       <p className="text-xs text-gray-500 text-center">
         Press Enter to confirm, Esc to cancel
       </p>
