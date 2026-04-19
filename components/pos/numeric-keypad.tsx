@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getCurrencyLocale } from '@/lib/currency';
+import { useCurrency } from '@/lib/currency-context';
 import { Delete } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -26,9 +27,42 @@ export function NumericKeypad({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [rawValue, setRawValue] = useState('0');
+  const { activeCurrency } = useCurrency();
+  const currencyLocale = getCurrencyLocale(activeCurrency);
+
+  const { decimalSeparator, localizedDigitMap, asciiToLocalizedDigit } = useMemo(() => {
+    const formatter = new Intl.NumberFormat(currencyLocale, { useGrouping: false });
+    const localizedDigits = formatter.format(9876543210).split('').reverse();
+    const localizedDigitEntries = localizedDigits.map((digit, index) => [digit, String(index)] as const);
+    const decimalPart = formatter.formatToParts(1.1).find((part) => part.type === 'decimal');
+
+    return {
+      decimalSeparator: decimalPart?.value ?? '.',
+      localizedDigitMap: new Map(localizedDigitEntries),
+      asciiToLocalizedDigit: new Map(localizedDigitEntries.map(([localizedDigit, asciiDigit]) => [asciiDigit, localizedDigit])),
+    };
+  }, [currencyLocale]);
+
+  const localizeDigits = (input: string): string =>
+    input
+      .split('')
+      .map((char) => {
+        if (char === '.') return decimalSeparator;
+        return asciiToLocalizedDigit.get(char) ?? char;
+      })
+      .join('');
+
+  const normalizeInput = (input: string): string =>
+    input
+      .split('')
+      .map((char) => {
+        if (char === decimalSeparator) return '.';
+        return localizedDigitMap.get(char) ?? char;
+      })
+      .join('');
 
   const normalizeRawValue = (input: string): string => {
-    const cleaned = input.replace(/[^0-9.]/g, '');
+    const cleaned = normalizeInput(input).replace(/[^0-9.]/g, '');
     const [integerPartRaw = '', ...decimalParts] = cleaned.split('.');
     const hasDecimal = cleaned.includes('.');
     const decimalPart = decimalParts.join('').slice(0, 2);
@@ -59,14 +93,14 @@ export function NumericKeypad({
     return `${integerPart}.${trimmedDecimalPart}`;
   };
 
-  const formatValue = (input: string): string => {
+  const formatValueForCurrency = (input: string): string => {
     const numericValue = Number.parseFloat(input);
 
     if (Number.isNaN(numericValue) || numericValue < 0) {
       return '0.00';
     }
 
-    return numericValue.toLocaleString(getCurrencyLocale(), {
+    return numericValue.toLocaleString(getCurrencyLocale(activeCurrency), {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
       useGrouping: true,
@@ -155,7 +189,7 @@ export function NumericKeypad({
     setIsFocused(false);
     const normalized = normalizeRawValue(rawValue);
     setRawValue(normalized);
-    onValueChange(formatValue(normalized));
+    onValueChange(formatValueForCurrency(normalized));
   };
 
   useEffect(() => {
@@ -182,11 +216,11 @@ export function NumericKeypad({
 
   const inputValue = useMemo(() => {
     if (isFocused) {
-      return rawValue;
+      return localizeDigits(rawValue);
     }
 
-    return formatValue(rawValue);
-  }, [isFocused, rawValue]);
+    return formatValueForCurrency(rawValue);
+  }, [isFocused, localizeDigits, rawValue]);
 
   return (
     <div className="space-y-3">

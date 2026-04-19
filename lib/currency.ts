@@ -30,8 +30,8 @@ export function setActiveCurrency(currency: CurrencyType) {
   _activeCurrency = currency;
 }
 
-export function getCurrencyConfig(): CurrencyConfig {
-  return CURRENCY_SETTINGS[_activeCurrency];
+export function getCurrencyConfig(currency?: CurrencyType): CurrencyConfig {
+  return CURRENCY_SETTINGS[currency ?? _activeCurrency];
 }
 
 // Snapshot for backward-compat imports; prefer getCurrencyConfig() for dynamic use
@@ -40,13 +40,14 @@ export const ACTIVE_CURRENCY: CurrencyType = _activeCurrency;
 export function formatCurrency(
   amount: number | string,
   showSymbol: boolean = true,
-  customDecimals?: number
+  customDecimals?: number,
+  currency?: CurrencyType
 ): string {
   if (amount === null || amount === undefined) return '0.00';
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (isNaN(num)) return '0.00';
 
-  const config = getCurrencyConfig();
+  const config = getCurrencyConfig(currency);
   const decimals = customDecimals !== undefined ? customDecimals : config.decimals;
   const formatted = num.toLocaleString(config.locale, {
     minimumFractionDigits: decimals,
@@ -59,30 +60,30 @@ export function formatCurrencyNumber(amount: number | string, decimals?: number)
   return formatCurrency(amount, false, decimals);
 }
 
-export function getCurrencySymbol(): string {
-  return getCurrencyConfig().symbol;
+export function getCurrencySymbol(currency?: CurrencyType): string {
+  return getCurrencyConfig(currency).symbol;
 }
 
-export function getCurrencyCode(): string {
-  return getCurrencyConfig().code;
+export function getCurrencyCode(currency?: CurrencyType): string {
+  return getCurrencyConfig(currency).code;
 }
 
-export function getCurrencyLocale(): string {
-  return getCurrencyConfig().locale;
+export function getCurrencyLocale(currency?: CurrencyType): string {
+  return getCurrencyConfig(currency).locale;
 }
 
-export function getCurrencyDecimals(): number {
-  return getCurrencyConfig().decimals;
+export function getCurrencyDecimals(currency?: CurrencyType): number {
+  return getCurrencyConfig(currency).decimals;
 }
 
 /**
  * Parses a locale-formatted amount string back to a number.
  * Handles thousands separators and decimal points based on current locale.
  */
-export function parseLocaleAmount(value: string): number {
+export function parseLocaleAmount(value: string, currency?: CurrencyType): number {
   if (!value) return 0;
 
-  const config = getCurrencyConfig();
+  const config = getCurrencyConfig(currency);
 
   const numberFormatter = new Intl.NumberFormat(config.locale);
   const localizedDigits = new Intl.NumberFormat(config.locale, { useGrouping: false })

@@ -4,6 +4,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NumericKeypad } from '@/components/pos/numeric-keypad';
 import { setActiveCurrency } from '@/lib/currency';
 
+jest.mock('@/lib/currency-context', () => ({
+  useCurrency: () => ({
+    activeCurrency: 'USD',
+    currencySymbol: '$',
+    isLoading: false,
+    formatCurrency: (amount: number | string) => String(amount),
+    setCurrency: jest.fn(),
+    availableCurrencies: [],
+  }),
+}));
+
 function NumericKeypadHarness() {
   const [value, setValue] = React.useState('0.00');
 

@@ -11,7 +11,8 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { usePOSSession } from '@/hooks/use-pos-session';
 import { Colors } from '@/lib/design-tokens';
-import { formatCurrency, parseLocaleAmount } from '@/lib/currency';
+import { parseLocaleAmount } from '@/lib/currency';
+import { useCurrency } from '@/lib/currency-context';
 import { Customer } from '@/types/customer.types';
 import { ConcretePaymentMethod } from '@/types/payment.types';
 import {
@@ -56,6 +57,7 @@ export function POSPaymentPanel({
   const [validationError, setValidationError] = useState<string | null>(null);
   const { toast } = useToast();
   const { session, loading: sessionLoading, error: sessionError } = usePOSSession();
+  const { activeCurrency, formatCurrency } = useCurrency();
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -67,7 +69,7 @@ export function POSPaymentPanel({
   }, [isOpen]);
 
   // Calculate change (for cash)
-  const paidNum = parseLocaleAmount(paidAmount);
+  const paidNum = parseLocaleAmount(paidAmount, activeCurrency);
   const changeAmount = Math.max(0, paidNum - orderTotal);
 
   // Validate payment - pure function without state mutations
