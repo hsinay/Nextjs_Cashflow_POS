@@ -51,6 +51,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import { PaymentMethod } from '@/types/payment.types';
 import { CreateTransactionInput } from '@/types/pos.types';
 import { Prisma } from '@prisma/client';
@@ -168,8 +169,7 @@ export async function processIntegratedPOSTransaction(
     costPriceForInventory = true,
   } = input;
 
-  return prisma.$transaction(
-    async (tx) => {
+  return runInteractiveTransaction(async (tx) => {
       // ========================================================================
       // STEP 1: VALIDATION
       // ========================================================================

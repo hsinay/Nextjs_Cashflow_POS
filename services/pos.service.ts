@@ -1,4 +1,6 @@
+import { BadRequestError, NotFoundError } from '@/lib/errors';
 import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
     CreatePOSSessionInput,
     CreateTransactionInput,
@@ -11,7 +13,6 @@ import {
 import { Prisma } from '@prisma/client';
 import { createInventoryTransaction } from './inventory.service';
 import { createPaymentFromTransaction } from './payment.service';
-import { BadRequestError, NotFoundError } from '@/lib/errors';
 
 function convertToNumber(value: any): any {
     if (value === null || value === undefined) return value;
@@ -185,7 +186,7 @@ export async function getLatestOpenPOSSessionByCashierId(cashierId: string): Pro
 
 // Transactions
 export async function createTransaction(data: CreateTransactionInput): Promise<Transaction> {
-    return prisma.$transaction(async (tx) => {
+    return runInteractiveTransaction(async (tx) => {
         const { transactionNumber, cashierId, sessionId, customerId, items, paymentDetails, notes } = data;
 
         const cashier = await tx.user.findUnique({ where: { id: cashierId } });

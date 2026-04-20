@@ -1,6 +1,7 @@
 // services/grn.service.ts
 
 import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import { createInventoryTransaction } from './inventory.service';
 import { createLedgerEntry } from './ledger.service';
 
@@ -69,7 +70,7 @@ export async function createGRN(data: CreateGRNInput): Promise<GRNRecord> {
     throw new Error('Purchase order must be CONFIRMED to receive goods');
   }
 
-  return await prisma.$transaction(async (tx) => {
+  return await runInteractiveTransaction(async (tx) => {
     // Generate GRN number
     // const count = await tx.goodsReceivedNote.count();
 
@@ -197,7 +198,7 @@ export async function acceptGRN(grnId: string): Promise<void> {
     throw new Error('GRN not found');
   }
 
-  return await prisma.$transaction(async (tx) => {
+  return await runInteractiveTransaction(async (tx) => {
     // Update GRN status
     await tx.goodsReceivedNote.update({
       where: { id: grnId },
@@ -245,7 +246,7 @@ export async function rejectGRNItem(grnItemId: string, reason: string): Promise<
     throw new Error('GRN item not found');
   }
 
-    return await prisma.$transaction(async () => {
+    return await runInteractiveTransaction(async () => {
     // Create reverse inventory transaction
     await createInventoryTransaction({
       productId: grnItem.productId,

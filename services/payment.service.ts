@@ -1,14 +1,15 @@
-import { prisma } from '@/lib/prisma';
 import { getCurrencyCode } from '@/lib/currency';
+import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
-  CreatePaymentInput,
-  CreateReconciliationInput,
-  CreateRefundInput,
-  PaginatedPayments,
-  Payment,
-  PaymentFilters,
-  PaymentRefund,
-  UpdatePaymentInput,
+    CreatePaymentInput,
+    CreateReconciliationInput,
+    CreateRefundInput,
+    PaginatedPayments,
+    Payment,
+    PaymentFilters,
+    PaymentRefund,
+    UpdatePaymentInput,
 } from '@/types/payment.types';
 import { Prisma } from '@prisma/client';
 import { createLedgerEntry } from './ledger.service'; // Import ledger service
@@ -576,7 +577,7 @@ export async function getPaymentById(id: string): Promise<Payment | null> {
 }
 
 export async function createPayment(data: CreatePaymentInput): Promise<Payment> {
-  return prisma.$transaction(async (tx) => {
+  return runInteractiveTransaction(async (tx) => {
     const { payerId, payerType, amount, paymentMethod, referenceOrderId, referenceNumber, notes, paymentDate, transactionFee = 0, status = 'COMPLETED' } = data;
 
     // Validate payer
@@ -653,7 +654,7 @@ export async function createPayment(data: CreatePaymentInput): Promise<Payment> 
 }
 
 export async function updatePayment(id: string, data: UpdatePaymentInput): Promise<Payment> {
-  return prisma.$transaction(async (tx) => {
+  return runInteractiveTransaction(async (tx) => {
     const existingPayment = await tx.payment.findUnique({ where: { id } });
     if (!existingPayment) throw new Error('Payment not found');
 
@@ -766,7 +767,7 @@ export async function updatePayment(id: string, data: UpdatePaymentInput): Promi
 }
 
 export async function deletePayment(id: string): Promise<void> {
-  return prisma.$transaction(async (tx) => {
+  return runInteractiveTransaction(async (tx) => {
     const existingPayment = await tx.payment.findUnique({ where: { id } });
     if (!existingPayment) throw new Error('Payment not found');
 
@@ -809,7 +810,7 @@ export async function deletePayment(id: string): Promise<void> {
 // ============================================================================
 
 export async function createRefund(data: CreateRefundInput): Promise<PaymentRefund> {
-  return prisma.$transaction(async (tx) => {
+  return runInteractiveTransaction(async (tx) => {
     // Validate payment exists
     const payment = await tx.payment.findUnique({ where: { id: data.paymentId } });
     if (!payment) throw new Error('Payment not found');
@@ -863,7 +864,7 @@ export async function approveRefund(refundId: string, approvedBy: string, notes?
 }
 
 export async function processRefund(refundId: string, processedBy: string, notes?: string): Promise<PaymentRefund> {
-  return prisma.$transaction(async (tx) => {
+  return runInteractiveTransaction(async (tx) => {
     const refund = await tx.paymentRefund.findUnique({ where: { id: refundId } });
     if (!refund) throw new Error('Refund not found');
 
@@ -1017,7 +1018,7 @@ export async function approveReconciliation(
   reconciledBy: string,
   notes?: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  return runInteractiveTransaction(async (tx) => {
     const reconciliation = await tx.paymentReconciliation.update({
       where: { id: reconciliationId },
       data: {
