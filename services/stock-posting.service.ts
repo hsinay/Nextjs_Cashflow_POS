@@ -1,6 +1,7 @@
 // services/stock-posting.service.ts
 
 import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import { createLedgerEntry } from './ledger.service';
 
 export interface StockPostingEntry {
@@ -28,7 +29,7 @@ export interface CreateStockPostingInput {
 export async function postStock(data: CreateStockPostingInput): Promise<import('@prisma/client').StockPosting> {
   const { referenceId, referenceType, postingDate, entries, approvedBy, notes } = data;
 
-  return await prisma.$transaction(async (tx) => {
+  return await runInteractiveTransaction(async (tx) => {
     let totalAmount = 0;
 
     // Create stock posting record

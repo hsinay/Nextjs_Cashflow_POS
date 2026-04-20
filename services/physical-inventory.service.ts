@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
     AddCountLineInput,
     CreatePhysicalInventoryInput,
@@ -59,7 +60,7 @@ export async function createPhysicalInventory(
   // Generate reference number
   const referenceNumber = await generateReferenceNumber(location.code);
 
-  return await prisma.$transaction(async (tx) => {
+  return await runInteractiveTransaction(async (tx) => {
     // Create physical inventory record
     const pi = await tx.physicalInventory.create({
       data: {
@@ -364,7 +365,7 @@ export async function completePhysicalInventory(
   piId: string,
   autoAdjust: boolean = true
 ): Promise<PhysicalInventory> {
-  return await prisma.$transaction(async (tx) => {
+  return await runInteractiveTransaction(async (tx) => {
     const pi = await tx.physicalInventory.findUnique({
       where: { id: piId },
       include: { lines: true, location: true },

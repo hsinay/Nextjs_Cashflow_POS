@@ -1,12 +1,13 @@
 // services/sales-order.service.ts
 
 import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
-  CreateSalesOrderInput,
-  PaginatedSalesOrders,
-  SalesOrder,
-  SalesOrderFilters,
-  UpdateSalesOrderInput,
+    CreateSalesOrderInput,
+    PaginatedSalesOrders,
+    SalesOrder,
+    SalesOrderFilters,
+    UpdateSalesOrderInput,
 } from '@/types/sales-order.types';
 import { Prisma } from '@prisma/client';
 import { createInventoryTransaction } from './inventory.service'; // Import inventory service
@@ -235,8 +236,8 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
     // Extract payment data before transaction to avoid timeout
     const { payment, ...updateData } = data as any;
 
-    const updatedOrder = await prisma.$transaction(
-        async (tx) => {
+    const updatedOrder = await runInteractiveTransaction(
+      async (tx) => {
             const existingOrder = await tx.salesOrder.findUnique({
                 where: { id },
                 include: { items: true },

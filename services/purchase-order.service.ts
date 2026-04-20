@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
-  CreatePurchaseOrderInput,
-  PaginatedPurchaseOrders,
-  PurchaseOrder,
-  PurchaseOrderFilters,
-  UpdatePurchaseOrderInput,
+    CreatePurchaseOrderInput,
+    PaginatedPurchaseOrders,
+    PurchaseOrder,
+    PurchaseOrderFilters,
+    UpdatePurchaseOrderInput,
 } from '@/types/purchase-order.types';
 import { Prisma } from '@prisma/client';
 import { createInventoryTransaction } from './inventory.service'; // Import inventory service
@@ -206,7 +207,7 @@ export async function createPurchaseOrder(data: CreatePurchaseOrderInput): Promi
 }
 
 export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderInput): Promise<PurchaseOrder> {
-  return prisma.$transaction(async (tx) => {
+  return runInteractiveTransaction(async (tx) => {
       const existingOrder = await tx.purchaseOrder.findUnique({
           where: { id },
           include: { items: true },
@@ -435,7 +436,7 @@ export async function linkPaymentToPurchaseOrder(
   paymentId: string
 ): Promise<PurchaseOrder> {
   // Use transaction to ensure data consistency
-  return await prisma.$transaction(async (tx) => {
+  return await runInteractiveTransaction(async (tx) => {
     // Validate PO exists
     const po = await tx.purchaseOrder.findUnique({
       where: { id: purchaseOrderId },
@@ -530,7 +531,7 @@ export async function unlinkPaymentFromPurchaseOrder(
   purchaseOrderId: string,
   paymentId: string
 ): Promise<PurchaseOrder> {
-  return await prisma.$transaction(async (tx) => {
+  return await runInteractiveTransaction(async (tx) => {
     // Validate PO exists
     const po = await tx.purchaseOrder.findUnique({
       where: { id: purchaseOrderId },

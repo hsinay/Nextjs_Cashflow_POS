@@ -1,6 +1,7 @@
 // services/partial-receipt.service.ts
 
 import { prisma } from '@/lib/prisma';
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import { createInventoryTransaction } from './inventory.service';
 import { createLedgerEntry } from './ledger.service';
 
@@ -41,7 +42,7 @@ export async function createPartialReceipt(
     throw new Error('Purchase order must be CONFIRMED or PARTIALLY_RECEIVED');
   }
 
-  return await prisma.$transaction(async (tx) => {
+  return await runInteractiveTransaction(async (tx) => {
     // Create partial receipt record
     const receipt = await tx.partialReceipt.create({
       data: {
