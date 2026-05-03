@@ -16,15 +16,16 @@ function createLogger() {
   }
 
   try {
-    const pretty = require('pino-pretty') as (options?: Record<string, unknown>) => NodeJS.WritableStream;
-
-    return pino(
-      options,
-      pretty({
-        colorize: true,
-        sync: true,
-      }),
-    );
+    return pino({
+      ...options,
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          sync: true,
+        },
+      },
+    });
   } catch {
     return pino(options);
   }

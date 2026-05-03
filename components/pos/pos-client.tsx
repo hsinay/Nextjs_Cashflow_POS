@@ -375,7 +375,7 @@ export function POSClient({ initialSession, products, categories, customers: _cu
             const priceData = await calculatePrice(product.id, newQty, selectedPricelist);
 
             // Derive effective unit price from the total calculated price
-            let unitPrice = (priceData?.calculatedPrice !== undefined && priceData.calculatedPrice !== null) 
+            const unitPrice = (priceData?.calculatedPrice !== undefined && priceData.calculatedPrice !== null) 
                 ? priceData.calculatedPrice 
                 : product.price;
             
