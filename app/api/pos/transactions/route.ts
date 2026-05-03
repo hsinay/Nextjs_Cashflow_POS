@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        logger.error('GET /api/pos/transactions error:', error);
+        logger.error({ err: error }, 'GET /api/pos/transactions error:');
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -102,11 +102,11 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        logger.error('POST /api/pos/transactions error:', {
+        logger.error({
             error: error.message,
             stack: error.stack,
             requestBody: body,
-        });
+        }, 'POST /api/pos/transactions error:');
 
         if (error instanceof z.ZodError) {
             return NextResponse.json(

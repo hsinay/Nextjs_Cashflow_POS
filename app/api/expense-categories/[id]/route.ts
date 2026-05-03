@@ -30,7 +30,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
-    logger.error("Failed to fetch expense category:", error);
+    logger.error({ err: error }, "Failed to fetch expense category:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -68,7 +68,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
-    logger.error("Failed to update expense category:", error);
+    logger.error({ err: error }, "Failed to update expense category:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -100,7 +100,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
-    logger.error("Failed to delete expense category:", error);
+    logger.error({ err: error }, "Failed to delete expense category:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

@@ -10,8 +10,8 @@
  */
 
 import { getServerSession } from 'next-auth';
-import { createMocks } from 'node-mocks-http';
-import { v4 as uuidv4 } from 'uuid';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const uuidv4: () => string = require('uuid').v4;
 
 // Mock next-auth
 jest.mock('next-auth', () => ({
@@ -84,7 +84,7 @@ describe('Pricelist API Integration Tests', () => {
     it('should reject unauthenticated requests', async () => {
       mockGetServerSession.mockResolvedValue(null);
 
-      const payload = {
+      const _payload = {
         name: 'Test Pricelist',
         priority: 1,
         currency: 'USD',
@@ -98,7 +98,7 @@ describe('Pricelist API Integration Tests', () => {
     it('should reject requests from non-admin users', async () => {
       mockGetServerSession.mockResolvedValue(mockSessionNonAdmin as any);
 
-      const payload = {
+      const _payload = {
         name: 'Test Pricelist',
         priority: 1,
         currency: 'USD',
@@ -112,7 +112,7 @@ describe('Pricelist API Integration Tests', () => {
     it('should validate required fields', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
-      const invalidPayload = {
+      const invalidPayload: Record<string, unknown> = {
         description: 'Missing name',
         priority: 1,
         currency: 'USD',
@@ -205,7 +205,7 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('PUT /api/pricelists/[id]', () => {
-    const pricelistId = uuidv4();
+    const _pricelistId = uuidv4();
 
     it('should update pricelist with new data', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
@@ -260,7 +260,7 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('DELETE /api/pricelists/[id]', () => {
-    const pricelistId = uuidv4();
+    const _pricelistId = uuidv4();
 
     it('should delete pricelist and cascade delete rules', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
@@ -286,7 +286,7 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('POST /api/pricelists/[id]/rules', () => {
-    const pricelistId = uuidv4();
+    const _pricelistId = uuidv4();
 
     it('should create a new rule in pricelist', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
@@ -309,7 +309,7 @@ describe('Pricelist API Integration Tests', () => {
     it('should validate rule data with pricelist currency', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
-      const pricelistUSD = { currency: 'USD' };
+      const _pricelistUSD = { currency: 'USD' };
       const invalidRule = {
         appliedTo: 'PRODUCT',
         productId: null, // Missing productId for PRODUCT type
@@ -323,8 +323,8 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('PATCH /api/pricelists/[id]/rules/[ruleId]', () => {
-    const pricelistId = uuidv4();
-    const ruleId = uuidv4();
+    const _pricelistId = uuidv4();
+    const _ruleId = uuidv4();
 
     it('should update existing rule', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
@@ -353,8 +353,8 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('DELETE /api/pricelists/[id]/rules/[ruleId]', () => {
-    const pricelistId = uuidv4();
-    const ruleId = uuidv4();
+    const _pricelistId2 = uuidv4();
+    const _ruleId2 = uuidv4();
 
     it('should delete rule from pricelist', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
@@ -394,7 +394,7 @@ describe('Pricelist API Integration Tests', () => {
     it('should return 401 for unauthenticated price calculation', async () => {
       mockGetServerSession.mockResolvedValue(null);
 
-      const request = {
+      const _request = {
         productId: 'product-1',
         quantity: 10,
       };
@@ -456,7 +456,7 @@ describe('Pricelist API Integration Tests', () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
       const now = new Date();
-      const pastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const _pastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       const request = {
         productId: 'product-1',

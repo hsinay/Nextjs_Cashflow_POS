@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: posSession }, { status: 200 });
     } catch (error) {
-        logger.error(`GET /api/pos/sessions/${params.id} error:`, error);
+        logger.error({ err: error }, `GET /api/pos/sessions/${params.id} error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -81,7 +81,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             { status: 200 }
         );
     } catch (error: any) {
-        logger.error(`PUT /api/pos/sessions/${params.id} error:`, error);
+        logger.error({ err: error }, `PUT /api/pos/sessions/${params.id} error:`);
         if (error.message?.includes('not found') || error.message?.includes('already closed')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

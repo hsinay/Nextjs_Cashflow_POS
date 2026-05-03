@@ -30,7 +30,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<APIRespons
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error in GET /api/categories:', error);
+    logger.error({ err: error }, 'Error in GET /api/categories:');
     return NextResponse.json(
       {
         success: false,
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<APIRespon
       { status: 201 }
     );
   } catch (error) {
-    logger.error('Error in POST /api/categories:', error);
+    logger.error({ err: error }, 'Error in POST /api/categories:');
 
     if (error instanceof Error) {
       // Handle specific business logic errors

@@ -54,7 +54,7 @@ export async function POST(
       { status: 200 }
     );
   } catch (error) {
-    logger.error("Failed to reconcile daybook:", error);
+    logger.error({ err: error }, "Failed to reconcile daybook:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -80,7 +80,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: summary });
   } catch (error) {
-    logger.error("Failed to fetch reconciliation summary:", error);
+    logger.error({ err: error }, "Failed to fetch reconciliation summary:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to calculate price';
-    logger.error('Price calculation error:', error);
+    logger.error({ err: error }, 'Price calculation error:');
     return NextResponse.json(
       { error: message },
       { status: 500 }

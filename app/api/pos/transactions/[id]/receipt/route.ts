@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         // For now, we return the transaction data directly.
         return NextResponse.json({ success: true, data: transaction, message: "Simulated receipt data" }, { status: 200 });
     } catch (error) {
-        logger.error(`GET /api/pos/transactions/${params.id}/receipt error:`, error);
+        logger.error({ err: error }, `GET /api/pos/transactions/${params.id}/receipt error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

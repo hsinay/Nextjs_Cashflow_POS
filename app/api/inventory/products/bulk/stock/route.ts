@@ -128,7 +128,7 @@ export async function PATCH(request: NextRequest) {
       { status: errors.length === 0 ? 200 : 207 }
     );
   } catch (error) {
-    logger.error('PATCH /api/inventory/products/bulk/stock error:', error);
+    logger.error({ err: error }, 'PATCH /api/inventory/products/bulk/stock error:');
     const errorMessage = error instanceof Error ? error.message : 'Failed to update stocks';
     return NextResponse.json(
       { success: false, error: errorMessage },

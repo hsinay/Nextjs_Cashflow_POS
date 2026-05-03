@@ -430,7 +430,7 @@ describe('Sales order payment state transitions (via service behavior)', () => {
 
 describe('Purchase order payment state transitions', () => {
   it('PENDING when nothing has been paid', () => {
-    const totalAmount = makeDecimal('500');
+    const _totalAmount = makeDecimal('500');
     const paidAmount = makeDecimal('0');
     const status = paidAmount.lessThanOrEqualTo(0) ? 'PENDING' : 'OTHER';
     expect(status).toBe('PENDING');

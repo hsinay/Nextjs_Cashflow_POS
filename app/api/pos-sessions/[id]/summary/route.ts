@@ -42,7 +42,7 @@ export async function GET(
       data: summary,
     });
   } catch (error: any) {
-    logger.error('Error fetching POS session summary:', error);
+    logger.error({ err: error }, 'Error fetching POS session summary:');
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch session summary' },
       { status: error.statusCode || 500 }

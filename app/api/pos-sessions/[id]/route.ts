@@ -41,7 +41,7 @@ export async function GET(
       data: posSession,
     });
   } catch (error: any) {
-    logger.error('Error fetching POS session:', error);
+    logger.error({ err: error }, 'Error fetching POS session:');
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch POS session' },
       { status: error.statusCode || 500 }
@@ -93,7 +93,7 @@ export async function PUT(
       data: closedSession,
     });
   } catch (error: any) {
-    logger.error('Error closing POS session:', error);
+    logger.error({ err: error }, 'Error closing POS session:');
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to close POS session' },
       { status: error.statusCode || 500 }

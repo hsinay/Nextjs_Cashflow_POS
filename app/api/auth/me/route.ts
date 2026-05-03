@@ -32,7 +32,7 @@ export async function GET() {
       );
     }
 
-    logger.error('Get user error:', error);
+    logger.error({ err: error }, 'Get user error:');
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

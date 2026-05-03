@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    logger.error('[POS Integration Error]', error);
+    logger.error({ err: error }, '[POS Integration Error]');
 
     // Handle specific error types
     if (error.code === 'P2002') {

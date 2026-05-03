@@ -182,8 +182,8 @@ describe('RBAC Configuration', () => {
 
     it('should return correct permissions for each role', () => {
       Object.values(RoleEnum).forEach(role => {
-        const permissions = getRolePermissions(role as keyof typeof RoleEnum);
-        const expectedPermissions = ROLE_PERMISSIONS[role as keyof typeof RoleEnum];
+        const permissions = getRolePermissions(role as RoleEnum);
+        const expectedPermissions = ROLE_PERMISSIONS[role as RoleEnum];
         expect(permissions).toEqual(expectedPermissions);
       });
     });

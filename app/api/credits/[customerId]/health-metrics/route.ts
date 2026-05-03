@@ -34,7 +34,7 @@ export async function GET(
       );
     }
 
-    logger.error('[Health Metrics GET]', error);
+    logger.error({ err: error }, '[Health Metrics GET]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

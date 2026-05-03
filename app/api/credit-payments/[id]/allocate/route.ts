@@ -84,7 +84,7 @@ export async function POST(
       }
     }
 
-    logger.error('[Payment Allocate POST]', error);
+    logger.error({ err: error }, '[Payment Allocate POST]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -27,7 +27,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: history }, { status: 200 });
     } catch (error) {
-        logger.error(`GET /api/products/${params.id}/inventory-history error:`, error);
+        logger.error({ err: error }, `GET /api/products/${params.id}/inventory-history error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

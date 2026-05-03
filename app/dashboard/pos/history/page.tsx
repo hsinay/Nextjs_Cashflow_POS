@@ -124,7 +124,7 @@ export default async function POSHistoryPage({ searchParams }: POSHistoryPagePro
       </div>
     );
   } catch (error) {
-    logger.error('Failed to load POS session history:', error);
+    logger.error({ err: error }, 'Failed to load POS session history:');
 
     return (
       <div className="space-y-6">

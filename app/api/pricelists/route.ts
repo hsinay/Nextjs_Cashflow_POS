@@ -40,7 +40,7 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch pricelists';
-    logger.error('Error fetching pricelists:', error);
+    logger.error({ err: error }, 'Error fetching pricelists:');
     return NextResponse.json(
       { error: message },
       { status: 500 }
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to create pricelist';
-    logger.error('Error creating pricelist:', error);
+    logger.error({ err: error }, 'Error creating pricelist:');
     return NextResponse.json(
       { error: message },
       { status: 500 }

@@ -65,7 +65,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to create rule';
-    logger.error('Error creating rule:', error);
+    logger.error({ err: error }, 'Error creating rule:');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

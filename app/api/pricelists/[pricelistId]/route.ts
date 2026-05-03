@@ -50,7 +50,7 @@ export async function GET(
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch pricelist';
-    logger.error('Error fetching pricelist:', error);
+    logger.error({ err: error }, 'Error fetching pricelist:');
     return NextResponse.json(
       { error: message },
       { status: 500 }
@@ -175,7 +175,7 @@ export async function PUT(
     }
 
     const message = error instanceof Error ? error.message : 'Failed to update pricelist';
-    logger.error('Error updating pricelist:', error);
+    logger.error({ err: error }, 'Error updating pricelist:');
     return NextResponse.json(
       { error: message },
       { status: 500 }
@@ -225,7 +225,7 @@ export async function DELETE(
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to delete pricelist';
-    logger.error('Error deleting pricelist:', error);
+    logger.error({ err: error }, 'Error deleting pricelist:');
     return NextResponse.json(
       { error: message },
       { status: 500 }

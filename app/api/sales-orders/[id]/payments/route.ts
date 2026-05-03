@@ -27,7 +27,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: payments.payments }, { status: 200 });
     } catch (error) {
-        logger.error(`GET /api/sales-orders/${params.id}/payments error:`, error);
+        logger.error({ err: error }, `GET /api/sales-orders/${params.id}/payments error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

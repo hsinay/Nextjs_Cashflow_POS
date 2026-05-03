@@ -93,8 +93,9 @@ describe('DELETE API endpoint error handling', () => {
       } as any);
 
       // In actual route, this would return 403
+      const userRole = 'CASHIER' as string;
       const hasPermission =
-        'ADMIN' === 'CASHIER' || 'INVENTORY_MANAGER' === 'CASHIER';
+        ('ADMIN' as string) === userRole || ('INVENTORY_MANAGER' as string) === userRole;
       expect(hasPermission).toBe(false);
     });
 
@@ -107,8 +108,9 @@ describe('DELETE API endpoint error handling', () => {
         },
       } as any);
 
+      const userRole = 'ADMIN' as string;
       const hasPermission =
-        'ADMIN' === 'ADMIN' || 'INVENTORY_MANAGER' === 'ADMIN';
+        ('ADMIN' as string) === userRole || ('INVENTORY_MANAGER' as string) === userRole;
       expect(hasPermission).toBe(true);
     });
 
@@ -121,9 +123,10 @@ describe('DELETE API endpoint error handling', () => {
         },
       } as any);
 
+      const userRole = 'INVENTORY_MANAGER' as string;
       const hasPermission =
-        'ADMIN' === 'INVENTORY_MANAGER' ||
-        'INVENTORY_MANAGER' === 'INVENTORY_MANAGER';
+        ('ADMIN' as string) === userRole ||
+        ('INVENTORY_MANAGER' as string) === userRole;
       expect(hasPermission).toBe(true);
     });
   });

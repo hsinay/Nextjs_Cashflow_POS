@@ -48,7 +48,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: payment });
   } catch (error: unknown) {
-    logger.error('[Credit Payment GET Detail]', error);
+    logger.error({ err: error }, '[Credit Payment GET Detail]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -111,7 +111,7 @@ export async function PUT(
       }
     }
 
-    logger.error('[Credit Payment PUT]', error);
+    logger.error({ err: error }, '[Credit Payment PUT]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

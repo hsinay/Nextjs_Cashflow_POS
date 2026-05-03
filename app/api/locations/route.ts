@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    logger.error('Error fetching locations:', error);
+    logger.error({ err: error }, 'Error fetching locations:');
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

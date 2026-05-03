@@ -30,7 +30,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: ledgerEntry }, { status: 200 });
     } catch (error) {
-        logger.error(`GET /api/ledger/${params.id} error:`, error);
+        logger.error({ err: error }, `GET /api/ledger/${params.id} error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

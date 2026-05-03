@@ -50,7 +50,7 @@ export async function GET(
       },
     });
   } catch (error: any) {
-    logger.error('Report retrieval error:', error);
+    logger.error({ err: error }, 'Report retrieval error:');
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to retrieve report' },
       { status: 500 }

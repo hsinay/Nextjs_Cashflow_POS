@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     const categories = await expenseCategoryService.getCategoriesFlat(!includeInactive);
     return NextResponse.json({ success: true, data: categories });
   } catch (error) {
-    logger.error("Failed to fetch expense categories:", error);
+    logger.error({ err: error }, "Failed to fetch expense categories:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: category }, { status: 201 });
   } catch (error) {
-    logger.error("Failed to create expense category:", error);
+    logger.error({ err: error }, "Failed to create expense category:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

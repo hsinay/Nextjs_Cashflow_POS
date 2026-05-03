@@ -23,7 +23,7 @@ export async function GET(
       data: customer,
     });
   } catch (error: any) {
-    logger.error('Error fetching customer:', error);
+    logger.error({ err: error }, 'Error fetching customer:');
     return NextResponse.json(
       { success: false, error: 'Failed to fetch customer' },
       { status: 500 }

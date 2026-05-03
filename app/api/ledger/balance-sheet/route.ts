@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ success: true, data: report }, { status: 200 });
     } catch (error) {
-        logger.error('GET /api/ledger/balance-sheet error:', error);
+        logger.error({ err: error }, 'GET /api/ledger/balance-sheet error:');
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

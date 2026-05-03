@@ -1,4 +1,4 @@
-import { calculateProductPrice, getAllPricelists, getPricelistById, createPricelist } from '@/services/pricelist.service';
+import { calculateProductPrice } from '@/services/pricelist.service';
 import { prisma } from '@/lib/prisma';
 import { Decimal } from 'decimal.js';
 
@@ -18,7 +18,10 @@ jest.mock('@/lib/prisma', () => ({
   },
 }));
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>;
+const mockPrisma = prisma as {
+  product: { findUnique: jest.Mock };
+  pricelist: { findMany: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock };
+};
 
 describe('PricelistService - calculateProductPrice', () => {
   beforeEach(() => {
@@ -530,8 +533,8 @@ describe('PricelistService - calculateProductPrice', () => {
       mockPrisma.product.findUnique.mockResolvedValue(mockProduct as any);
       
       const now = new Date();
-      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const _yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const _tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
       mockPrisma.pricelist.findMany.mockResolvedValue([]);
 

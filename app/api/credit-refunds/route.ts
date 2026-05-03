@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       pagination: { skip, take, total },
     });
   } catch (error: unknown) {
-    logger.error('[Credit Refunds GET]', error);
+    logger.error({ err: error }, '[Credit Refunds GET]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    logger.error('[Credit Refunds POST]', error);
+    logger.error({ err: error }, '[Credit Refunds POST]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

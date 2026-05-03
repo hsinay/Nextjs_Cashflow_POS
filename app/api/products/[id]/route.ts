@@ -51,7 +51,7 @@ export async function GET(
       { status: 200 }
     );
   } catch (error) {
-    logger.error('GET /api/products/[id] error:', error);
+    logger.error({ err: error }, 'GET /api/products/[id] error:');
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -123,7 +123,7 @@ export async function PUT(
       { status: 200 }
     );
   } catch (error: any) {
-    logger.error('PUT /api/products/[id] error:', error);
+    logger.error({ err: error }, 'PUT /api/products/[id] error:');
 
     // Handle specific errors
     if (error.message?.includes('not found')) {
@@ -193,7 +193,7 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error: any) {
-    logger.error('DELETE /api/products/[id] error:', error);
+    logger.error({ err: error }, 'DELETE /api/products/[id] error:');
 
     if (error.message?.includes('not found')) {
       return NextResponse.json(

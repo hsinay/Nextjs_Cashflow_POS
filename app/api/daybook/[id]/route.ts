@@ -27,7 +27,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: daybook });
   } catch (error) {
-    logger.error("Failed to fetch daybook:", error);
+    logger.error({ err: error }, "Failed to fetch daybook:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -83,7 +83,7 @@ export async function PUT(
       { status: 400 }
     );
   } catch (error) {
-    logger.error("Failed to update daybook:", error);
+    logger.error({ err: error }, "Failed to update daybook:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

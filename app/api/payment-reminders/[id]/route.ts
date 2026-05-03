@@ -43,7 +43,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: reminder });
   } catch (error: unknown) {
-    logger.error('[Payment Reminder GET Detail]', error);
+    logger.error({ err: error }, '[Payment Reminder GET Detail]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -106,7 +106,7 @@ export async function PUT(
       }
     }
 
-    logger.error('[Payment Reminder PUT]', error);
+    logger.error({ err: error }, '[Payment Reminder PUT]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

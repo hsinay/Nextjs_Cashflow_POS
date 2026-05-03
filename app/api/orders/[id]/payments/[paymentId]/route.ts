@@ -33,7 +33,7 @@ export async function DELETE(
       message: 'Payment deleted successfully',
     });
   } catch (error: any) {
-    logger.error('Error deleting payment:', error);
+    logger.error({ err: error }, 'Error deleting payment:');
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

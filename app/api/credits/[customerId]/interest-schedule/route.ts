@@ -46,7 +46,7 @@ export async function GET(
       );
     }
 
-    logger.error('[Interest Schedule GET]', error);
+    logger.error({ err: error }, '[Interest Schedule GET]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

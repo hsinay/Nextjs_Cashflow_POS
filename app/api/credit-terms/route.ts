@@ -42,7 +42,7 @@ export async function GET(_req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    logger.error('[Credit Terms GET]', error);
+    logger.error({ err: error }, '[Credit Terms GET]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

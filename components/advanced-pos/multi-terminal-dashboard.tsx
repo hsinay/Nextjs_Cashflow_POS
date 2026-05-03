@@ -1,7 +1,7 @@
 'use client';
 
 import { H2, KPICard, Small, StatusBadge } from '@/components/ui';
-import { Colors, Typography } from '@/lib/design-tokens';
+import { BorderRadius, Colors, Spacing } from '@/lib/design-tokens';
 import { formatCurrency } from '@/lib/utils';
 import { Terminal, TerminalDashboard } from '@/types/advanced-pos.types';
 import { Activity, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -38,7 +38,7 @@ export function MultiTerminalDashboard({ data }: MultiTerminalDashboardProps) {
       </div>
 
       {/* Terminals Grid */}
-      <div style={{ backgroundColor: Colors.background, borderRadius: Typography.borderRadius.lg, border: `1px solid ${Colors.gray[200]}`, padding: Typography.spacing.lg }}>
+      <div style={{ backgroundColor: Colors.white, borderRadius: BorderRadius.lg, border: `1px solid ${Colors.gray[200]}`, padding: Spacing.lg }}>
         <H2>Terminals Status</H2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
           {data.terminals.map(terminal => (
@@ -49,17 +49,17 @@ export function MultiTerminalDashboard({ data }: MultiTerminalDashboardProps) {
 
       {/* Active Sessions */}
       {data.activeSessions.length > 0 && (
-        <div style={{ backgroundColor: Colors.background, borderRadius: Typography.borderRadius.lg, border: `1px solid ${Colors.gray[200]}`, padding: Typography.spacing.lg }}>
+        <div style={{ backgroundColor: Colors.white, borderRadius: BorderRadius.lg, border: `1px solid ${Colors.gray[200]}`, padding: Spacing.lg }}>
           <H2>Active Sessions</H2>
           <div className="space-y-3 mt-4">
             {data.activeSessions.map(session => (
               <div
                 key={session.sessionId}
                 style={{
-                  padding: Typography.spacing.md,
+                  padding: Spacing.md,
                   backgroundColor: Colors.primary.light,
                   border: `1px solid ${Colors.primary.lighter}`,
-                  borderRadius: Typography.borderRadius.md
+                  borderRadius: BorderRadius.md
                 }}
               >
                 <div className="flex items-center justify-between">
@@ -72,7 +72,7 @@ export function MultiTerminalDashboard({ data }: MultiTerminalDashboardProps) {
                     </Small>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold" style={{ color: Colors.primary.main }}>
+                    <p className="text-2xl font-bold" style={{ color: Colors.primary.start }}>
                       {formatCurrency(session.totalSales)}
                     </p>
                     <Small color={Colors.text.secondary} className="mt-1">
@@ -100,14 +100,14 @@ function TerminalCard({ terminal }: TerminalCardProps) {
     return 'PENDING';
   };
 
-  const getStatusIcon = (status: string) => {
+  const _getStatusIcon = (status: string) => {
     if (status === 'ACTIVE') return <CheckCircle2 className="w-4 h-4" />;
     if (status === 'OFFLINE') return <AlertCircle className="w-4 h-4" />;
     return <Activity className="w-4 h-4" />;
   };
 
   return (
-    <div style={{ border: `1px solid ${Colors.gray[200]}`, borderRadius: Typography.borderRadius.md, padding: Typography.spacing.md }}>
+    <div style={{ border: `1px solid ${Colors.gray[200]}`, borderRadius: BorderRadius.md, padding: Spacing.md }}>
       <div className="flex items-start justify-between mb-3">
         <div>
           <p className="font-semibold" style={{ color: Colors.text.primary }}>{terminal.name}</p>
@@ -127,7 +127,7 @@ function TerminalCard({ terminal }: TerminalCardProps) {
             <span className="text-mono text-xs" style={{ color: Colors.text.primary }}>{terminal.ipAddress}</span>
           </div>
         )}
-        <div style={{ paddingTop: Typography.spacing.sm, borderTop: `1px solid ${Colors.gray[200]}`, marginTop: Typography.spacing.sm }}>
+        <div style={{ paddingTop: Spacing.sm, borderTop: `1px solid ${Colors.gray[200]}`, marginTop: Spacing.sm }}>
           <div className="flex justify-between">
             <Small color={Colors.text.secondary}>Last Activity:</Small>
             <Small color={Colors.text.secondary}>

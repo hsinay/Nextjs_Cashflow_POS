@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    logger.error('Report generation error:', error);
+    logger.error({ err: error }, 'Report generation error:');
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to generate report' },
       { status: 500 }

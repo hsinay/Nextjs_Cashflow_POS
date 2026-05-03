@@ -29,7 +29,7 @@ export async function GET(_req: Request) {
       data: activeSession,
     });
   } catch (error: any) {
-    logger.error('Error fetching active POS session:', error);
+    logger.error({ err: error }, 'Error fetching active POS session:');
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch active session' },
       { status: error.statusCode || 500 }

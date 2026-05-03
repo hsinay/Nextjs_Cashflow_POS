@@ -28,7 +28,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: entries });
   } catch (error) {
-    logger.error("Failed to fetch entries:", error);
+    logger.error({ err: error }, "Failed to fetch entries:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -68,7 +68,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: entry }, { status: 201 });
   } catch (error) {
-    logger.error("Failed to create entry:", error);
+    logger.error({ err: error }, "Failed to create entry:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

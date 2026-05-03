@@ -35,7 +35,7 @@ export async function POST(
       { status: 200 }
     );
   } catch (error: unknown) {
-    logger.error('[Calculate Interest POST]', error);
+    logger.error({ err: error }, '[Calculate Interest POST]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

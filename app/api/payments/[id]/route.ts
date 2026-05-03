@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: payment }, { status: 200 });
     } catch (error) {
-        logger.error(`GET /api/payments/${params.id} error:`, error);
+        logger.error({ err: error }, `GET /api/payments/${params.id} error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -73,7 +73,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             { status: 200 }
         );
     } catch (error: any) {
-        logger.error(`PUT /api/payments/${params.id} error:`, error);
+        logger.error({ err: error }, `PUT /api/payments/${params.id} error:`);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }
@@ -108,7 +108,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, message: 'Payment deleted successfully' }, { status: 200 });
     } catch (error: any) {
-        logger.error(`DELETE /api/payments/${params.id} error:`, error);
+        logger.error({ err: error }, `DELETE /api/payments/${params.id} error:`);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    logger.error('GET /api/payments error:', error);
+    logger.error({ err: error }, 'GET /api/payments error:');
     return NextResponse.json(
       { error: 'Failed to fetch payments' },
       { status: 500 }
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: payment }, { status: 201 });
   } catch (error) {
-    logger.error('POST /api/payments error:', error);
+    logger.error({ err: error }, 'POST /api/payments error:');
     return NextResponse.json(
       { error: 'Failed to create payment' },
       { status: 500 }

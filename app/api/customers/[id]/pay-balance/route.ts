@@ -29,7 +29,7 @@ export async function POST(
       payment,
     });
   } catch (error: any) {
-    logger.error('Error paying balance:', error);
+    logger.error({ err: error }, 'Error paying balance:');
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid input', details: error.errors },

@@ -39,7 +39,7 @@ export async function GET() {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch products';
-    logger.error('GET /api/inventory/products error:', error);
+    logger.error({ err: error }, 'GET /api/inventory/products error:');
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

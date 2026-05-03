@@ -36,7 +36,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: summary });
   } catch (error: unknown) {
-    logger.error('[Credits GET Detail]', error);
+    logger.error({ err: error }, '[Credits GET Detail]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -93,7 +93,7 @@ export async function PUT(
       }
     }
 
-    logger.error('[Credits PUT]', error);
+    logger.error({ err: error }, '[Credits PUT]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

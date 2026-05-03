@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ success: true, data: daybooks });
   } catch (error) {
-    logger.error("Failed to fetch daybooks:", error);
+    logger.error({ err: error }, "Failed to fetch daybooks:");
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: daybook }, { status: 201 });
   } catch (error) {
-    logger.error("Failed to open daybook:", error);
+    logger.error({ err: error }, "Failed to open daybook:");
     if (error instanceof Error && error.message.includes("Day book already exists")) {
       return NextResponse.json(
         { success: false, error: error.message },

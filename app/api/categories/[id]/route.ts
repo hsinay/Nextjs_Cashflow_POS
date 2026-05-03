@@ -40,7 +40,7 @@ export async function GET(
       { status: 200 }
     );
   } catch (error: unknown) {
-    logger.error(`Error in GET /api/categories/[id]:`, error);
+    logger.error({ err: error }, `Error in GET /api/categories/[id]:`);
 
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json(
@@ -138,7 +138,7 @@ export async function PUT(
       { status: 200 }
     );
   } catch (error: unknown) {
-    logger.error(`Error in PUT /api/categories/[id]:`, error);
+    logger.error({ err: error }, `Error in PUT /api/categories/[id]:`);
 
     if (error instanceof Error) {
       // Handle specific errors
@@ -253,7 +253,7 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error: unknown) {
-    logger.error(`Error in DELETE /api/categories/[id]:`, error);
+    logger.error({ err: error }, `Error in DELETE /api/categories/[id]:`);
 
     if (error instanceof Error) {
       // Handle specific errors

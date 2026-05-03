@@ -39,7 +39,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ success: true, data: rule });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch rule';
-    logger.error('Error fetching rule:', error);
+    logger.error({ err: error }, 'Error fetching rule:');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -111,7 +111,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to update rule';
-    logger.error('Error updating rule:', error);
+    logger.error({ err: error }, 'Error updating rule:');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -152,7 +152,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to delete rule';
-    logger.error('Error deleting rule:', error);
+    logger.error({ err: error }, 'Error deleting rule:');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

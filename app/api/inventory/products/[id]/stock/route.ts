@@ -63,7 +63,7 @@ export async function PATCH(
       { status: 200 }
     );
   } catch (error) {
-    logger.error('PATCH /api/inventory/products/[id]/stock error:', error);
+    logger.error({ err: error }, 'PATCH /api/inventory/products/[id]/stock error:');
 
     if (error instanceof Error && error.message === 'Product not found') {
       return NextResponse.json(

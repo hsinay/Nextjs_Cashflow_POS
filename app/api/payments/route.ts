@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        logger.error('GET /api/payments error:', error);
+        logger.error({ err: error }, 'GET /api/payments error:');
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        logger.error('POST /api/payments error:', error);
+        logger.error({ err: error }, 'POST /api/payments error:');
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

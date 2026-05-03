@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       pagination: { skip, take, total },
     });
   } catch (error: unknown) {
-    logger.error('[Payment Reminders GET]', error);
+    logger.error({ err: error }, '[Payment Reminders GET]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    logger.error('[Payment Reminders POST]', error);
+    logger.error({ err: error }, '[Payment Reminders POST]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

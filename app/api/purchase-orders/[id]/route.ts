@@ -36,7 +36,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: order }, { status: 200 });
     } catch (error) {
-        logger.error(`GET /api/purchase-orders/${params.id} error:`, error);
+        logger.error({ err: error }, `GET /api/purchase-orders/${params.id} error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -76,7 +76,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ success: true, data: updatedOrder }, { status: 200 });
 
     } catch (error: any) {
-        logger.error(`PUT /api/purchase-orders/${params.id} error:`, error);
+        logger.error({ err: error }, `PUT /api/purchase-orders/${params.id} error:`);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }
@@ -104,7 +104,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, message: 'Purchase order deleted successfully' }, { status: 200 });
     } catch (error: any) {
-        logger.error(`DELETE /api/purchase-orders/${params.id} error:`, error);
+        logger.error({ err: error }, `DELETE /api/purchase-orders/${params.id} error:`);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

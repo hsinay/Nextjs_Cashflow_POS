@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error: any) {
-    logger.error('Error creating POS session:', error);
+    logger.error({ err: error }, 'Error creating POS session:');
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create POS session' },
       { status: error.statusCode || 500 }
@@ -76,7 +76,7 @@ export async function GET(req: Request) {
       count: sessions.length,
     });
   } catch (error: any) {
-    logger.error('Error listing POS sessions:', error);
+    logger.error({ err: error }, 'Error listing POS sessions:');
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to list POS sessions' },
       { status: error.statusCode || 500 }

@@ -33,7 +33,7 @@ export async function GET(
       data: { payments, summary },
     });
   } catch (error: any) {
-    logger.error('Error fetching payments:', error);
+    logger.error({ err: error }, 'Error fetching payments:');
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
@@ -70,7 +70,7 @@ export async function POST(
       { status: 201 }
     );
   } catch (error: any) {
-    logger.error('Error creating payment:', error);
+    logger.error({ err: error }, 'Error creating payment:');
     
     // Handle validation errors
     if (error.errors) {

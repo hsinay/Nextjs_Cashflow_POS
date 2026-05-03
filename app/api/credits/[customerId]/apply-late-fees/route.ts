@@ -51,7 +51,7 @@ export async function POST(
       );
     }
 
-    logger.error('[Apply Late Fees POST]', error);
+    logger.error({ err: error }, '[Apply Late Fees POST]');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

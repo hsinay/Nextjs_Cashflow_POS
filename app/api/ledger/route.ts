@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        logger.error('GET /api/ledger error:', error);
+        logger.error({ err: error }, 'GET /api/ledger error:');
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        logger.error('POST /api/ledger error:', error);
+        logger.error({ err: error }, 'POST /api/ledger error:');
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
