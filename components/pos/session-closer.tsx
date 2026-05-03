@@ -53,10 +53,11 @@ export function SessionCloser({ session, onSessionClosed }: SessionCloserProps) 
       setNotes('');
       onSessionClosed?.();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to close session';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to close session',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

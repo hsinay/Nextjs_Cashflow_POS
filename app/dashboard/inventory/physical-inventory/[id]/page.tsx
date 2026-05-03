@@ -47,7 +47,6 @@ export default async function PhysicalInventoryDetailPage({ params }: PageProps)
     }
 
     const result = await getCountLines(params.id, {
-      physicalInventoryId: params.id,
       page: 1,
       limit: 100,
     });

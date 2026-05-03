@@ -5,8 +5,10 @@ const createJestConfig = nextJest({
 })
 
 const customJestConfig = {
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   testEnvironment: 'jest-environment-jsdom',
+  // Avoid Watchman; CI/sandbox often lacks permissions or a working Watchman socket.
+  watchman: false,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^uuid$': require.resolve('uuid'),

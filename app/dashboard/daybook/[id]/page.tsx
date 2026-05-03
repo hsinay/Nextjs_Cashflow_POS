@@ -14,7 +14,7 @@ interface DayBookPageProps {
 }
 
 export default async function DayBookPage({ params }: DayBookPageProps) {
-  const session = await getServerSession(authOptions as any);
+  const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     redirect('/login');

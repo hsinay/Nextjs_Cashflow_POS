@@ -40,13 +40,21 @@ export async function createInventoryTransaction(data: CreateInventoryTransactio
                 },
             },
         });
-    } else if (transactionType === 'SALES' || transactionType === 'SALES_RETURN') {
-        // Subtract from stock for sales
+    } else if (transactionType === 'SALE' || transactionType === 'POS_SALE') {
         await prisma.product.update({
             where: { id: productId },
             data: {
                 stockQuantity: {
                     decrement: quantity,
+                },
+            },
+        });
+    } else if (transactionType === 'RETURN') {
+        await prisma.product.update({
+            where: { id: productId },
+            data: {
+                stockQuantity: {
+                    increment: quantity,
                 },
             },
         });

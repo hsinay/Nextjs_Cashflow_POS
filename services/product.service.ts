@@ -123,6 +123,7 @@ export async function getAllProducts(filters: ProductFilters): Promise<Paginated
     .filter((p) => !lowStock || (p.reorderLevel !== null && p.stockQuantity <= p.reorderLevel))
     .map((p) => ({
       ...p,
+      visionEmbedding: null,
       price: convertDecimalToNumber(p.price),
       costPrice: convertOptionalDecimalToNumber(p.costPrice) ?? null,
       taxRate: convertOptionalDecimalToNumber(p.taxRate) ?? null,

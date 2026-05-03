@@ -3,14 +3,13 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { PaymentDetailInput } from '@/types/pos-payment.types';
 import { POSSession } from '@/types/pos.types';
 import { Category, Customer, Product } from '@prisma/client';
-import { ChevronDown, Image as ImageIcon, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react';
+import { Image as ImageIcon, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { POSPaymentPanel } from './pos-payment-panel';
 
@@ -231,7 +230,7 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                             <span className="text-xs font-medium text-gray-600 bg-red-100 text-red-700 px-2 py-1 rounded">
                                 No Session
                             </span>
-                            <Button onClick={() => handleOpenSession(0)} size="xs" className="bg-green-600 hover:bg-green-700 h-6">
+                            <Button onClick={() => handleOpenSession(0)} size="sm" className="bg-green-600 hover:bg-green-700 h-6 text-xs px-2">
                                 Open Session
                             </Button>
                         </div>
@@ -243,7 +242,7 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                             <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded font-medium">
                                 Active
                             </span>
-                            <Button onClick={() => handleCloseSession(0)} variant="destructive" size="xs" className="h-6">
+                            <Button onClick={() => handleCloseSession(0)} variant="destructive" size="sm" className="h-6 text-xs px-2">
                                 Close
                             </Button>
                         </div>

@@ -1,3 +1,5 @@
+import type { Prisma } from '@prisma/client';
+import type { CreatePricelistRuleInput } from '@/lib/validations/pricelist.schema';
 import { prisma } from '@/lib/prisma';
 
 interface PriceCalculationInput {
@@ -407,33 +409,25 @@ export async function deletePricelist(id: string) {
  */
 export async function createPricelistRule(
   pricelistId: string,
-  data: {
-    productId: string;
-    name: string;
-    minQuantity?: number;
-    maxQuantity?: number | null;
-    calculationType: string;
-    discountPercentage?: number | null;
-    fixedPrice?: number | null;
-    fixedDiscount?: number | null;
-    formulaMargin?: number | null;
-    formulaMarkup?: number | null;
-    isActive?: boolean;
-  }
+  data: CreatePricelistRuleInput
 ) {
   return prisma.pricelistRule.create({
     data: {
       pricelistId,
-      productId: data.productId,
-      name: data.name,
+      name: data.name?.trim() || 'Pricing rule',
+      priority: data.priority ?? 0,
       minQuantity: data.minQuantity ?? 1,
-      maxQuantity: data.maxQuantity || null,
+      maxQuantity: data.maxQuantity ?? null,
+      appliedTo: data.appliedTo,
+      productId: data.productId ?? null,
+      categoryId: data.categoryId ?? null,
+      customerGroupId: data.customerGroupId ?? null,
       calculationType: data.calculationType,
-      discountPercentage: data.discountPercentage,
-      fixedPrice: data.fixedPrice,
-      fixedDiscount: data.fixedDiscount,
-      formulaMargin: data.formulaMargin,
-      formulaMarkup: data.formulaMarkup,
+      discountPercentage: data.discountPercentage ?? null,
+      fixedPrice: data.fixedPrice ?? null,
+      fixedDiscount: data.fixedDiscount ?? null,
+      formulaMargin: data.formulaMargin ?? null,
+      formulaMarkup: data.formulaMarkup ?? null,
       isActive: data.isActive !== false,
     },
     include: {
@@ -447,19 +441,7 @@ export async function createPricelistRule(
  */
 export async function updatePricelistRule(
   ruleId: string,
-  data: Partial<{
-    productId: string;
-    name: string;
-    minQuantity: number;
-    maxQuantity: number | null;
-    calculationType: string;
-    discountPercentage: number | null;
-    fixedPrice: number | null;
-    fixedDiscount: number | null;
-    formulaMargin: number | null;
-    formulaMarkup: number | null;
-    isActive: boolean;
-  }>
+  data: Prisma.PricelistRuleUpdateInput
 ) {
   return prisma.pricelistRule.update({
     where: { id: ruleId },

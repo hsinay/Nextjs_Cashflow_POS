@@ -83,7 +83,7 @@ export function TrendAnalysisComponent({ data, chartType = 'LINE' }: TrendAnalys
             </Small>
             <div
               className="text-4xl font-bold mt-2"
-              style={{ color: getTrendTextColor() }}
+              style={{ color: getTrendColor() }}
             >
               {data.trend}
             </div>
@@ -223,7 +223,7 @@ export function TrendAnalysisComponent({ data, chartType = 'LINE' }: TrendAnalys
                 <td
                   className="px-4 py-3"
                   style={{
-                    fontSize: Typography.sizes.sm,
+                    fontSize: Typography.fontSize.small,
                     color: Colors.text.primary,
                   }}
                 >
@@ -232,7 +232,7 @@ export function TrendAnalysisComponent({ data, chartType = 'LINE' }: TrendAnalys
                 <td
                   className="px-4 py-3 text-right font-semibold"
                   style={{
-                    fontSize: Typography.sizes.sm,
+                    fontSize: Typography.fontSize.small,
                     color: Colors.text.primary,
                   }}
                 >
@@ -241,7 +241,7 @@ export function TrendAnalysisComponent({ data, chartType = 'LINE' }: TrendAnalys
                 <td
                   className="px-4 py-3 text-right font-semibold"
                   style={{
-                    fontSize: Typography.sizes.sm,
+                    fontSize: Typography.fontSize.small,
                     color: point.value > data.averageValue ? Colors.success : Colors.danger,
                   }}
                 >

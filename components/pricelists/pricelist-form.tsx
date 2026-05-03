@@ -40,7 +40,6 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-    getValues,
   } = useForm<PricelistFormData>({
     resolver: zodResolver(pricelistFormSchema),
     mode: 'onSubmit',
@@ -53,14 +52,20 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
     },
   });
 
-  const { fields: ruleFields, append: appendRule, remove: removeRule, update: updateRule } = useFieldArray({
+  const { fields: ruleFields, append: appendRule, remove: removeRule } = useFieldArray({
     control,
     name: 'rules',
   });
 
   // Get unique product IDs from rules (grouped by product)
   const productsInRules = useMemo(() => {
-    const uniqueProducts = Array.from(new Set(ruleFields.map(r => r.productId).filter(Boolean)));
+    const uniqueProducts = Array.from(
+      new Set(
+        ruleFields
+          .map((r) => r.productId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+      )
+    );
     return uniqueProducts;
   }, [ruleFields]);
 
@@ -69,11 +74,6 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
     return ruleFields
       .map((field, idx) => ({ index: idx, ...field }))
       .filter(rule => rule.productId === productId);
-  };
-
-  // Get product details
-  const getProductName = (productId: string) => {
-    return products?.find(p => p.id === productId)?.name || 'Unknown Product';
   };
 
   // Friendly currency formatter for quick previews
@@ -105,19 +105,6 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
       default:
         return prettyMoney(basePrice);
     }
-  };
-
-  /**
-   * Get total price preview for a rule (useful for FIXED_PRICE to show customer what they'll pay)
-   */
-  const getTotalPricePreview = (rule: any, quantity: number) => {
-    if (rule.calculationType !== 'FIXED_PRICE') return null;
-    if (!rule.fixedPrice || !rule.minQuantity) return null;
-    
-    const tierPrice = Number(rule.fixedPrice);
-    const tierQty = Number(rule.minQuantity);
-    const total = tierPrice * (quantity / tierQty);
-    return prettyMoney(total);
   };
 
   const selectedProductProduct = activeProductTab ? products?.find(p => p.id === activeProductTab) : null;
@@ -176,7 +163,7 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
 
         // Check calculation type has required values
         if (rule.calculationType === 'PERCENTAGE_DISCOUNT') {
-          if (rule.discountPercentage === null || rule.discountPercentage === undefined || rule.discountPercentage === '') {
+          if (rule.discountPercentage === null || rule.discountPercentage === undefined) {
             toast({
               title: 'Error',
               description: `Tier ${i + 1}: Discount % is required`,
@@ -186,7 +173,7 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
             return;
           }
         } else if (rule.calculationType === 'FIXED_PRICE') {
-          if (rule.fixedPrice === null || rule.fixedPrice === undefined || rule.fixedPrice === '') {
+          if (rule.fixedPrice === null || rule.fixedPrice === undefined) {
             toast({
               title: 'Error',
               description: `Tier ${i + 1}: Fixed Price is required`,
@@ -196,7 +183,7 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
             return;
           }
         } else if (rule.calculationType === 'FIXED_DISCOUNT') {
-          if (rule.fixedDiscount === null || rule.fixedDiscount === undefined || rule.fixedDiscount === '') {
+          if (rule.fixedDiscount === null || rule.fixedDiscount === undefined) {
             toast({
               title: 'Error',
               description: `Tier ${i + 1}: Fixed Discount is required`,
@@ -206,8 +193,8 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
             return;
           }
         } else if (rule.calculationType === 'FORMULA') {
-          const hasMargin = rule.formulaMargin !== null && rule.formulaMargin !== undefined && rule.formulaMargin !== '';
-          const hasMarkup = rule.formulaMarkup !== null && rule.formulaMarkup !== undefined && rule.formulaMarkup !== '';
+          const hasMargin = rule.formulaMargin !== null && rule.formulaMargin !== undefined;
+          const hasMarkup = rule.formulaMarkup !== null && rule.formulaMarkup !== undefined;
           if (!hasMargin && !hasMarkup) {
             toast({
               title: 'Error',
@@ -557,7 +544,7 @@ export function PricelistForm({ initialData, isEdit = false }: PricelistFormProp
                       alignItems: 'center',
                       gap: Spacing.xs,
                       padding: `${Spacing.sm} ${Spacing.md}`,
-                      backgroundColor: isActive ? Colors.primary : Colors.gray[100],
+                      backgroundColor: isActive ? Colors.primary.start : Colors.gray[100],
                       color: isActive ? Colors.white : Colors.text.primary,
                       borderRadius: BorderRadius.md,
                       cursor: 'pointer',

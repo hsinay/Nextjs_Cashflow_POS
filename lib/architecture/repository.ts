@@ -7,6 +7,23 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { IRepository } from './core';
 
+/** Minimal delegate shape for generic CRUD (Prisma 6+ no longer exports ModelDelegate). */
+type PrismaCrudDelegate = {
+  findUnique(args: {
+    where: { id: string };
+    select?: Record<string, unknown>;
+  }): Promise<unknown>;
+  findMany(args: {
+    where: unknown;
+    skip: number;
+    take: number;
+    select?: Record<string, unknown>;
+  }): Promise<unknown[]>;
+  count(args: { where: unknown }): Promise<number>;
+  create(args: { data: unknown; select?: Record<string, unknown> }): Promise<unknown>;
+  delete(args: { where: { id: string } }): Promise<unknown>;
+};
+
 /**
  * Generic Repository base class
  * Reduces boilerplate for entity-specific repositories
@@ -16,7 +33,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
   protected abstract select?: Record<string, unknown>;
 
   async findById(id: string): Promise<T | null> {
-    const model = prisma[this.modelName] as unknown as Prisma.ModelDelegate<any>;
+    const model = prisma[this.modelName] as unknown as PrismaCrudDelegate;
     return model.findUnique({
       where: { id },
       select: this.select || undefined,
@@ -28,7 +45,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     skip: number = 0,
     take: number = 20
   ): Promise<T[]> {
-    const model = prisma[this.modelName] as unknown as Prisma.ModelDelegate<any>;
+    const model = prisma[this.modelName] as unknown as PrismaCrudDelegate;
     const where = this.buildWhereClause(filters);
 
     return model.findMany({
@@ -40,13 +57,13 @@ export abstract class BaseRepository<T> implements IRepository<T> {
   }
 
   async count(filters: Record<string, unknown>): Promise<number> {
-    const model = prisma[this.modelName] as unknown as Prisma.ModelDelegate<any>;
+    const model = prisma[this.modelName] as unknown as PrismaCrudDelegate;
     const where = this.buildWhereClause(filters);
     return model.count({ where });
   }
 
   async create(data: unknown): Promise<T> {
-    const model = prisma[this.modelName] as unknown as Prisma.ModelDelegate<any>;
+    const model = prisma[this.modelName] as unknown as PrismaCrudDelegate;
     return model.create({
       data,
       select: this.select || undefined,
@@ -63,7 +80,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
   }
 
   async delete(id: string): Promise<boolean> {
-    const model = prisma[this.modelName] as unknown as Prisma.ModelDelegate<any>;
+    const model = prisma[this.modelName] as unknown as PrismaCrudDelegate;
     await model.delete({ where: { id } });
     return true;
   }
@@ -83,7 +100,8 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     if (value instanceof Prisma.Decimal) {
       return value.toNumber();
     }
-    return value;
+    if (typeof value === 'number') return value;
+    return undefined;
   }
 
   /**
@@ -91,7 +109,8 @@ export abstract class BaseRepository<T> implements IRepository<T> {
    */
   protected convertArrayToNumbers(items: unknown[], fields: string[]): unknown[] {
     return items.map(item => {
-      const converted = { ...item };
+      if (!item || typeof item !== 'object') return item;
+      const converted = { ...(item as Record<string, unknown>) };
       fields.forEach(field => {
         if (field in converted) {
           converted[field] = this.convertToNumber(converted[field]);

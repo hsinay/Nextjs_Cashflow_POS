@@ -19,8 +19,9 @@ interface DayBook {
   cashVariance?: number | { toNumber: () => number } | null;
   isReconciled: boolean;
   _count?: { entries: number };
-  openedBy?: { username: string };
-  closedBy?: { username: string };
+  openedBy?: { username: string } | null;
+  closedBy?: { username: string } | null;
+  approvedBy?: { username: string } | null;
 }
 
 interface DayBookSummaryProps {

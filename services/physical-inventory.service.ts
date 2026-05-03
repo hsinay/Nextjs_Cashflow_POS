@@ -224,8 +224,6 @@ export async function addCountLine(
     },
   });
 
-  const variance = data.physicalQuantity - pi.systemQuantity; // Will be updated with actual system qty
-
   if (existingLine) {
     // Update existing line
     const newVariance = data.physicalQuantity - existingLine.systemQuantity;

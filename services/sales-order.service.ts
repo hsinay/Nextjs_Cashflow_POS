@@ -9,6 +9,7 @@ import {
     SalesOrderFilters,
     UpdateSalesOrderInput,
 } from '@/types/sales-order.types';
+import type { SalesOrderPaymentStatus, SalesOrderStatus } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { createInventoryTransaction } from './inventory.service'; // Import inventory service
 import { createLedgerEntry } from './ledger.service'; // Import ledger service
@@ -25,7 +26,22 @@ function convertToNumber(value: unknown): unknown {
   return value;
 }
 
-function getSalesOrderFinancialState(totalAmount: Prisma.Decimal, paidAmount: Prisma.Decimal) {
+function decimalToNumber(value: unknown): number {
+  if (value instanceof Prisma.Decimal) return value.toNumber();
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getSalesOrderFinancialState(
+  totalAmount: Prisma.Decimal,
+  paidAmount: Prisma.Decimal
+): {
+  paidAmount: Prisma.Decimal;
+  balanceAmount: Prisma.Decimal;
+  paymentStatus: SalesOrderPaymentStatus;
+  status: SalesOrderStatus;
+} {
   const normalizedPaidAmount = paidAmount.greaterThan(totalAmount) ? totalAmount : paidAmount;
   const balanceAmount = totalAmount.minus(normalizedPaidAmount);
   const paymentStatus =
@@ -153,7 +169,7 @@ export async function createSalesOrder(data: CreateSalesOrderInput): Promise<Sal
         throw new Error(`Not enough stock for product ${product.name}`);
       }
 
-      const unitPrice = new Prisma.Decimal(item.unitPrice || convertToNumber(product.price));
+      const unitPrice = new Prisma.Decimal(item.unitPrice || decimalToNumber(product.price));
       const quantity = new Prisma.Decimal(item.quantity);
       const discount = new Prisma.Decimal(item.discount || 0);
       
@@ -221,7 +237,7 @@ export async function createSalesOrder(data: CreateSalesOrderInput): Promise<Sal
       description: `Sales Order #${salesOrder.id.substring(0,8)} from ${customer.name}`,
       debitAccount: 'Accounts Receivable',
       creditAccount: 'Sales Revenue',
-      amount: convertToNumber(salesOrder.totalAmount),
+      amount: decimalToNumber(salesOrder.totalAmount),
       referenceId: salesOrder.id,
   });
   
@@ -283,8 +299,8 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
                     if (!product) throw new Error('Product not found');
                     
                     const quantity = item.quantity || existingItem.quantity;
-                    const unitPrice = new Prisma.Decimal(item.unitPrice || convertToNumber(existingItem.unitPrice));
-                    const discount = new Prisma.Decimal(item.discount || convertToNumber(existingItem.discount));
+                    const unitPrice = new Prisma.Decimal(item.unitPrice || decimalToNumber(existingItem.unitPrice));
+                    const discount = new Prisma.Decimal(item.discount || decimalToNumber(existingItem.discount));
                     const subtotal = unitPrice.times(quantity).minus(discount);
                     totalAmount = totalAmount.plus(subtotal);
 
@@ -317,7 +333,7 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
                     const product = await tx.product.findUnique({ where: { id: item.productId } });
                     if (!product) throw new Error('Product not found');
 
-                    const unitPrice = new Prisma.Decimal(item.unitPrice || convertToNumber(product.price));
+                    const unitPrice = new Prisma.Decimal(item.unitPrice || decimalToNumber(product.price));
                     const quantity = item.quantity;
                     const discount = new Prisma.Decimal(item.discount || 0);
                     const subtotal = unitPrice.times(quantity).minus(discount);
@@ -379,7 +395,7 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
             description: `Sales Order #${id.substring(0,8)} updated`,
             debitAccount: 'Accounts Receivable',
             creditAccount: 'Sales Revenue',
-            amount: convertToNumber(totalAmount),
+            amount: decimalToNumber(totalAmount),
             referenceId: id,
         }, tx);
         
@@ -389,7 +405,7 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
         }
         return updatedOrder;
         },
-        { maxWait: 10000, timeout: 10000 } // Increase timeout from default 5000ms
+        10000
     );
 
     // Create payment AFTER transaction completes (outside transaction)
@@ -454,7 +470,7 @@ export async function deleteSalesOrder(id: string): Promise<void> {
         description: `Sales Order #${order.id.substring(0,8)} deleted (reversal)`,
         debitAccount: 'Sales Revenue',
         creditAccount: 'Accounts Receivable',
-        amount: convertToNumber(order.totalAmount),
+        amount: decimalToNumber(order.totalAmount),
         referenceId: order.id,
     });
 

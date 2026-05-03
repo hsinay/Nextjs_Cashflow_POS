@@ -7,6 +7,7 @@ import {
     PurchaseOrderFilters,
     UpdatePurchaseOrderInput,
 } from '@/types/purchase-order.types';
+import type { POPaymentStatus } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { createInventoryTransaction } from './inventory.service'; // Import inventory service
 import { createLedgerEntry } from './ledger.service'; // Import ledger service
@@ -19,7 +20,21 @@ function convertToNumber(value: unknown): unknown {
   return value;
 }
 
-function getPurchaseOrderFinancialState(totalAmount: Prisma.Decimal, paidAmount: Prisma.Decimal) {
+function decimalToNumber(value: unknown): number {
+  if (value instanceof Prisma.Decimal) return value.toNumber();
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getPurchaseOrderFinancialState(
+  totalAmount: Prisma.Decimal,
+  paidAmount: Prisma.Decimal
+): {
+  paidAmount: Prisma.Decimal;
+  balanceAmount: Prisma.Decimal;
+  paymentStatus: POPaymentStatus;
+} {
   const normalizedPaidAmount = paidAmount.lessThan(0) ? new Prisma.Decimal(0) : paidAmount;
   const balanceAmount = totalAmount.minus(normalizedPaidAmount);
   const normalizedBalanceAmount = balanceAmount.lessThan(0) ? new Prisma.Decimal(0) : balanceAmount;
@@ -139,7 +154,7 @@ export async function createPurchaseOrder(data: CreatePurchaseOrderInput): Promi
         throw new Error(`Product with id ${item.productId} not found`);
       }
 
-      const unitPrice = new Prisma.Decimal(item.unitPrice || convertToNumber(product.costPrice) || 0);
+      const unitPrice = new Prisma.Decimal(item.unitPrice || decimalToNumber(product.costPrice) || 0);
       const quantity = new Prisma.Decimal(item.quantity);
       const discount = new Prisma.Decimal(item.discount || 0);
       
@@ -199,7 +214,7 @@ export async function createPurchaseOrder(data: CreatePurchaseOrderInput): Promi
       description: `Purchase Order #${purchaseOrder.id.substring(0,8)} from ${supplier.name}`,
       debitAccount: 'Inventory', // Or Purchase Clearing
       creditAccount: 'Accounts Payable',
-      amount: convertToNumber(purchaseOrder.totalAmount),
+      amount: decimalToNumber(purchaseOrder.totalAmount),
       referenceId: purchaseOrder.id,
   });
   
@@ -253,8 +268,8 @@ export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderI
                   const quantityDiff = itemData.quantity ? itemData.quantity - item.quantity : 0;
                   
                   const quantity = itemData.quantity || item.quantity;
-                  const unitPrice = new Prisma.Decimal(itemData.unitPrice || convertToNumber(item.unitPrice));
-                  const discount = new Prisma.Decimal(itemData.discount || convertToNumber(item.discount));
+                  const unitPrice = new Prisma.Decimal(itemData.unitPrice || decimalToNumber(item.unitPrice));
+                  const discount = new Prisma.Decimal(itemData.discount || decimalToNumber(item.discount));
                   const subtotal = unitPrice.times(quantity).minus(discount);
                   
                   await tx.purchaseOrderItem.update({
@@ -285,7 +300,7 @@ export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderI
                   const product = await tx.product.findUnique({ where: { id: itemData.productId } });
                   if (!product) throw new Error(`Product with id ${itemData.productId} not found`);
 
-                  const unitPrice = new Prisma.Decimal(itemData.unitPrice || convertToNumber(product.costPrice) || 0);
+                  const unitPrice = new Prisma.Decimal(itemData.unitPrice || decimalToNumber(product.costPrice) || 0);
                   const quantity = itemData.quantity;
                   const discount = new Prisma.Decimal(itemData.discount || 0);
                   const subtotal = unitPrice.times(quantity).minus(discount);
@@ -332,7 +347,7 @@ export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderI
           description: `Purchase Order #${id.substring(0,8)} updated`,
           debitAccount: 'Inventory', // Or Purchase Clearing
           creditAccount: 'Accounts Payable',
-          amount: convertToNumber(totalAmount),
+          amount: decimalToNumber(totalAmount),
           referenceId: id,
       }, tx);
 
@@ -373,7 +388,7 @@ export async function deletePurchaseOrder(id: string): Promise<void> {
       description: `Purchase Order #${order.id.substring(0,8)} deleted (reversal)`,
       debitAccount: 'Accounts Payable',
       creditAccount: 'Inventory', // Or Purchase Clearing
-      amount: convertToNumber(order.totalAmount),
+      amount: decimalToNumber(order.totalAmount),
       referenceId: order.id,
   });
 
@@ -512,15 +527,16 @@ export async function linkPaymentToPurchaseOrder(
       description: `Payment received for PO #${purchaseOrderId.substring(0, 8)} - ${payment.paymentMethod}`,
       debitAccount: 'Bank Account', // Or specific bank based on payment method
       creditAccount: 'Accounts Payable',
-      amount: convertToNumber(payment.amount),
+      amount: decimalToNumber(payment.amount),
       referenceId: purchaseOrderId,
     }, tx);
 
     // Update supplier balance
     await updateSupplierBalance(po.supplierId, tx);
 
-    // Return updated PO
-    return getPurchaseOrderById(purchaseOrderId);
+    const refreshed = await getPurchaseOrderById(purchaseOrderId);
+    if (!refreshed) throw new Error('Purchase order not found after linking payment');
+    return refreshed;
   });
 }
 
@@ -591,14 +607,16 @@ export async function unlinkPaymentFromPurchaseOrder(
       description: `Payment reversed for PO #${purchaseOrderId.substring(0, 8)} - ${payment.paymentMethod}`,
       debitAccount: 'Accounts Payable',
       creditAccount: 'Bank Account',
-      amount: convertToNumber(payment.amount),
+      amount: decimalToNumber(payment.amount),
       referenceId: purchaseOrderId,
     }, tx);
 
     // Update supplier balance
     await updateSupplierBalance(po.supplierId, tx);
 
-    return getPurchaseOrderById(purchaseOrderId);
+    const refreshedUnlink = await getPurchaseOrderById(purchaseOrderId);
+    if (!refreshedUnlink) throw new Error('Purchase order not found after unlinking payment');
+    return refreshedUnlink;
   });
 }
 
@@ -683,13 +701,26 @@ export async function getSupplierBalanceDetails(supplierId: string) {
   };
 
   for (const po of purchaseOrders) {
-    const status = po.status.toLowerCase() as keyof typeof breakdown;
-    if (status in breakdown) {
-      breakdown[status].count++;
-      breakdown[status].totalAmount += convertToNumber(po.totalAmount);
-      breakdown[status].paidAmount += convertToNumber(po.paidAmount);
-      breakdown[status].balanceAmount += convertToNumber(po.balanceAmount);
-    }
+    const bucket = ((): keyof typeof breakdown | null => {
+      switch (po.status) {
+        case 'DRAFT':
+          return 'draft';
+        case 'CONFIRMED':
+        case 'PARTIALLY_RECEIVED':
+          return 'confirmed';
+        case 'RECEIVED':
+          return 'received';
+        case 'CANCELLED':
+          return 'cancelled';
+        default:
+          return null;
+      }
+    })();
+    if (!bucket) continue;
+    breakdown[bucket].count++;
+    breakdown[bucket].totalAmount += decimalToNumber(po.totalAmount);
+    breakdown[bucket].paidAmount += decimalToNumber(po.paidAmount);
+    breakdown[bucket].balanceAmount += decimalToNumber(po.balanceAmount);
   }
 
   const outstandingBalance = await prisma.purchaseOrder.aggregate({
@@ -702,16 +733,18 @@ export async function getSupplierBalanceDetails(supplierId: string) {
     },
   });
 
-  const derivedOutstandingBalance = convertToNumber(
+  const derivedOutstandingBalance = decimalToNumber(
     outstandingBalance._sum.balanceAmount ?? new Prisma.Decimal(0)
-  ) as number;
+  );
+
+  const creditLimitNum = decimalToNumber(supplier.creditLimit);
 
   return {
     supplierId,
     supplierName: supplier.name,
     outstandingBalance: derivedOutstandingBalance,
-    creditLimit: convertToNumber(supplier.creditLimit),
-    availableCredit: convertToNumber(supplier.creditLimit) - derivedOutstandingBalance,
+    creditLimit: creditLimitNum,
+    availableCredit: creditLimitNum - derivedOutstandingBalance,
     breakdown,
   };
 }

@@ -2,6 +2,8 @@
 
 import { prisma } from '@/lib/prisma';
 import { createCustomerSchema, updateCustomerSchema } from '@/lib/validations/customer.schema';
+import type { SalesOrder } from '@/types/sales-order.types';
+import type { Customer } from '@/types/customer.types';
 import { CreateCustomerInput, CustomerFilters, CustomerSegment, UpdateCustomerInput } from '@/types/customer.types';
 import { Prisma } from '@prisma/client';
 import { createPayment } from './payment.service';
@@ -56,7 +58,7 @@ export const CustomerService = {
       ]);
       
       return {
-        customers: convertToNumber(customers),
+        customers: convertToNumber(customers) as Customer[],
         pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
       };
     }
@@ -73,7 +75,7 @@ export const CustomerService = {
     const customersWithBalance = await Promise.all(
       customers.map(async (c) => {
         const outstandingBalance = await CustomerService.calculateOutstandingBalance(c.id);
-        const customerWithNumbers = convertToNumber(c);
+        const customerWithNumbers = convertToNumber(c) as Customer;
         return {
           ...customerWithNumbers,
           outstandingBalance,
@@ -107,10 +109,10 @@ export const CustomerService = {
       take: 5,
     });
     
-    return { 
-      ...convertToNumber(customer), 
-      outstandingBalance, 
-      recentOrders: convertToNumber(recentOrders)
+    return {
+      ...(convertToNumber(customer) as Customer),
+      outstandingBalance,
+      recentOrders: convertToNumber(recentOrders) as SalesOrder[],
     };
   },
   async createCustomer(data: CreateCustomerInput) {

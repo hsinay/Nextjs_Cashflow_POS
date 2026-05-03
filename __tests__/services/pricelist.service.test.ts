@@ -18,7 +18,7 @@ jest.mock('@/lib/prisma', () => ({
   },
 }));
 
-const mockPrisma = prisma as {
+const mockPrisma = prisma as unknown as {
   product: { findUnique: jest.Mock };
   pricelist: { findMany: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock };
 };
@@ -532,10 +532,6 @@ describe('PricelistService - calculateProductPrice', () => {
     it('should only apply active pricelists within date range', async () => {
       mockPrisma.product.findUnique.mockResolvedValue(mockProduct as any);
       
-      const now = new Date();
-      const _yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const _tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
       mockPrisma.pricelist.findMany.mockResolvedValue([]);
 
       const result = await calculateProductPrice({

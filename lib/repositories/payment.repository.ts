@@ -18,7 +18,6 @@ export class PaymentRepository extends BaseRepository<Payment> {
     paymentMethod: true,
     payerType: true,
     payerId: true,
-    description: true,
     notes: true,
   };
 
@@ -44,7 +43,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
     ]);
 
     return {
-      items: items.map(p => this.convertPaymentToNumber(p)),
+      items: items.map(p => this.convertPaymentToNumber(p as Record<string, unknown>)),
       total,
     };
   }
@@ -61,7 +60,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
       },
     });
 
-    return payment ? this.convertPaymentToNumber(payment) : null;
+    return payment ? this.convertPaymentToNumber(payment as Record<string, unknown>) : null;
   }
 
   /**
@@ -76,7 +75,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
       orderBy: { paymentDate: 'desc' },
     });
 
-    return payments.map(p => this.convertPaymentToNumber(p));
+    return payments.map(p => this.convertPaymentToNumber(p as Record<string, unknown>));
   }
 
   /**
@@ -163,7 +162,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
   /**
    * Convert Prisma payment to number type (Decimal → number)
    */
-  private convertPaymentToNumber(payment: Partial<Payment> & Record<string, unknown>): Payment {
+  private convertPaymentToNumber(payment: Record<string, unknown>): Payment {
     return {
       ...payment,
       amount: this.convertToNumber(payment.amount),

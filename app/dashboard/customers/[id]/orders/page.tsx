@@ -199,7 +199,6 @@ export default function CustomerOrdersPage({ params, searchParams }: { params: {
                             <div className="flex gap-2">
                               <OrderPaymentDialog
                                 orderId={order.id}
-                                customerId={params.id}
                                 totalAmount={order.totalAmount}
                                 paidAmount={order.paidAmount || 0}
                                 balanceAmount={order.balanceAmount}

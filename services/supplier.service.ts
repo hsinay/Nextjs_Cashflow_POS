@@ -36,7 +36,11 @@ export const SupplierService = {
       ]);
       
       return {
-        suppliers: suppliers.map(s => ({ ...s, creditLimit: Number(s.creditLimit) })),
+        suppliers: suppliers.map((s) => ({
+          ...s,
+          creditLimit: Number(s.creditLimit),
+          outstandingBalance: Number(s.outstandingBalance),
+        })),
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       };
     }

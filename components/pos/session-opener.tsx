@@ -46,10 +46,11 @@ export function SessionOpener({ onSessionOpened }: SessionOpenerProps) {
       setTerminalId('');
       onSessionOpened?.();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to open session';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to open session',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

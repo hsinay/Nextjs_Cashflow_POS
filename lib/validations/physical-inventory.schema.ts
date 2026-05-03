@@ -4,8 +4,9 @@ export const createPhysicalInventorySchema = z.object({
   referenceNumber: z.string().min(1, 'Reference number is required'),
   countDate: z.coerce.date(),
   locationId: z.string().uuid('Location ID must be a valid UUID'),
-  countMethod: z.enum(['FULL_COUNT', 'CYCLE_COUNT', 'SPOT_CHECK']),
+  countMethod: z.enum(['FULL_COUNT', 'PARTIAL_COUNT', 'CYCLE_COUNT']),
   notes: z.string().optional().nullable(),
+  productIds: z.array(z.string().uuid()).optional(),
 });
 
 export type CreatePhysicalInventoryInput = z.infer<typeof createPhysicalInventorySchema>;
@@ -14,7 +15,7 @@ export const updatePhysicalInventorySchema = z.object({
   referenceNumber: z.string().min(1).optional(),
   countDate: z.coerce.date().optional(),
   locationId: z.string().uuid().optional(),
-  countMethod: z.enum(['FULL_COUNT', 'CYCLE_COUNT', 'SPOT_CHECK']).optional(),
+  countMethod: z.enum(['FULL_COUNT', 'PARTIAL_COUNT', 'CYCLE_COUNT']).optional(),
   notes: z.string().optional().nullable(),
   status: z.enum(['DRAFT', 'CONFIRMED', 'DONE']).optional(),
 });

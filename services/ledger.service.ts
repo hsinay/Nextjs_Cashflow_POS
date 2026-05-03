@@ -10,12 +10,11 @@ import {
 } from '@/types/ledger.types';
 import { Prisma } from '@prisma/client';
 
-function convertToNumber(value: unknown): unknown {
-  if (value === null || value === undefined) return value;
-  if (value instanceof Prisma.Decimal) {
-    return value.toNumber();
-  }
-  return value;
+function decimalToNumber(value: unknown): number {
+  if (value instanceof Prisma.Decimal) return value.toNumber();
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
 // Support both regular and transaction contexts
@@ -37,7 +36,7 @@ export async function createLedgerEntry(data: CreateLedgerEntryInput, txClient?:
 
     return {
         ...entry,
-        amount: convertToNumber(entry.amount),
+        amount: decimalToNumber(entry.amount),
     };
 }
 
@@ -75,7 +74,7 @@ export async function getAllLedgerEntries(filters: LedgerFilters): Promise<Pagin
     return {
         entries: entries.map(e => ({
             ...e,
-            amount: convertToNumber(e.amount),
+            amount: decimalToNumber(e.amount),
         })),
         pagination: {
             page,
@@ -93,7 +92,7 @@ export async function getLedgerEntryById(id: string): Promise<LedgerEntry | null
     if (!entry) return null;
     return {
         ...entry,
-        amount: convertToNumber(entry.amount),
+        amount: decimalToNumber(entry.amount),
     };
 }
 
@@ -111,7 +110,7 @@ export async function updateLedgerEntry(id: string, data: UpdateLedgerEntryInput
     });
     return {
         ...updatedEntry,
-        amount: convertToNumber(updatedEntry.amount),
+        amount: decimalToNumber(updatedEntry.amount),
     };
 }
 
@@ -138,7 +137,7 @@ export async function getTrialBalance(startDate?: Date, endDate?: Date): Promise
     const accountBalances: Record<string, { debit: number; credit: number }> = {};
 
     entries.forEach(entry => {
-        const amount = convertToNumber(entry.amount);
+        const amount = decimalToNumber(entry.amount);
         
         // Debit account
         if (!accountBalances[entry.debitAccount]) {
@@ -194,24 +193,29 @@ export async function getProfitAndLossStatement(startDate?: Date, endDate?: Date
 
     const revenue = transactions
         .filter(t => t.status === 'COMPLETED')
-        .reduce((sum, t) => sum + convertToNumber(t.totalAmount), 0);
+        .reduce((sum, t) => sum + decimalToNumber(t.totalAmount), 0);
 
     const taxCollected = transactions
         .filter(t => t.status === 'COMPLETED')
-        .reduce((sum, t) => sum + convertToNumber(t.taxAmount), 0);
+        .reduce((sum, t) => sum + decimalToNumber(t.taxAmount), 0);
 
     const discountsGiven = transactions
-        .reduce((sum, t) => sum + convertToNumber(t.discountAmount), 0);
+        .reduce((sum, t) => sum + decimalToNumber(t.discountAmount), 0);
 
-    // Get expenses from ledger (expense accounts)
+    const expenseWhere: Prisma.LedgerEntryWhereInput = {
+      debitAccount: { contains: 'expense', mode: 'insensitive' },
+    };
+    if (startDate || endDate) {
+      expenseWhere.entryDate = {};
+      if (startDate) expenseWhere.entryDate.gte = startDate;
+      if (endDate) expenseWhere.entryDate.lte = endDate;
+    }
+
     const expenseEntries = await prisma.ledgerEntry.findMany({
-        where: {
-            ...where,
-            debitAccount: { contains: 'expense', mode: 'insensitive' },
-        },
+      where: expenseWhere,
     });
 
-    const totalExpenses = expenseEntries.reduce((sum, e) => sum + convertToNumber(e.amount), 0);
+    const totalExpenses = expenseEntries.reduce((sum, e) => sum + decimalToNumber(e.amount), 0);
     const netProfit = revenue - totalExpenses - discountsGiven;
 
     return {
@@ -247,7 +251,7 @@ export async function getBalanceSheet(date?: Date): Promise<any> {
     const equity: Record<string, number> = {};
 
     entries.forEach(entry => {
-        const amount = convertToNumber(entry.amount);
+        const amount = decimalToNumber(entry.amount);
 
         // Simplified categorization based on account name
         const debitAcc = entry.debitAccount.toLowerCase();

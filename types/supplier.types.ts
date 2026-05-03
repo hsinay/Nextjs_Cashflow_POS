@@ -7,8 +7,9 @@ export interface Supplier {
   contactNumber: string | null;
   address: string | null;
   creditLimit: number; // Decimal from Prisma, converted to number
-  outstandingBalance?: number; // Calculated, not stored in DB
+  outstandingBalance?: number; // Stored or computed as number after serialization
   isActive: boolean;
+  deletedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

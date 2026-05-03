@@ -1,8 +1,7 @@
-import { POSClient } from '@/components/pos/pos-client';
+import { POSClient, type POSCatalogProduct } from '@/components/pos/pos-client';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getLatestOpenPOSSessionByCashierId } from '@/services/pos.service';
-import { Product } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
@@ -33,12 +32,12 @@ export default async function POSPage() {
   });
   const categories = Array.from(categoryMap.values());
 
-  const serializedProducts = productsRaw.map((p) => ({
+  const serializedProducts: POSCatalogProduct[] = productsRaw.map((p) => ({
     ...p,
     price: p.price.toNumber(),
-    costPrice: p.costPrice?.toNumber() || null,
-    taxRate: p.taxRate?.toNumber() || null,
-  })) as (Product & { price: number; costPrice: number | null; taxRate: number | null })[];
+    costPrice: p.costPrice?.toNumber() ?? null,
+    taxRate: p.taxRate?.toNumber() ?? null,
+  }));
 
   return (
     <div className="h-full">

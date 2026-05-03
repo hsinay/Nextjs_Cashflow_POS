@@ -169,7 +169,7 @@ export function CategoryForm({
         </Alert>
       )}
 
-      <Form form={form}>
+      <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           {/* Name Field */}
           <FormField

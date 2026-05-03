@@ -159,7 +159,9 @@ export const Autocomplete = React.forwardRef<HTMLDivElement, AutocompleteProps>(
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder={displayValue?.(selectedOption) || placeholder}
+            placeholder={
+              open ? searchPlaceholder : displayValue?.(selectedOption) || placeholder
+            }
             disabled={disabled || isLoading}
             style={{
               width: '100%',

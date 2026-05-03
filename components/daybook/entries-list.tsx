@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
-import { DayBookEntryType, PaymentMethod } from "@prisma/client";
+import type { DayBookEntry as PrismaDayBookEntry } from "@prisma/client";
 import { ExternalLink, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -19,21 +19,13 @@ function formatDateTime(dateStr: string | Date): string {
   }) + " " + date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
 
-interface DayBookEntry {
-  id: string;
-  entryType: DayBookEntryType;
-  entryDate: Date | string;
-  description: string;
-  amount: number | { toNumber: () => number };
-  paymentMethod?: PaymentMethod;
-  referenceType?: "SALES_ORDER" | "PURCHASE_ORDER" | "POS_TRANSACTION" | "PAYMENT" | string | null;
-  referenceId?: string | null;
-  partyName?: string;
+/** Rows may optionally include `createdBy` when the API expands relations. */
+type DayBookEntryListRow = PrismaDayBookEntry & {
   createdBy?: { username: string };
-}
+};
 
 interface EntriesListProps {
-  entries: DayBookEntry[];
+  entries: DayBookEntryListRow[];
   isOpen?: boolean;
   onDelete?: (entryId: string) => Promise<void>;
 }
@@ -54,7 +46,7 @@ const entryTypeColors: Record<string, string> = {
   BANK_WITHDRAWAL: "bg-indigo-100 text-indigo-800",
 };
 
-function getReferenceHref(entry: DayBookEntry): string | null {
+function getReferenceHref(entry: DayBookEntryListRow): string | null {
   if (!entry.referenceType || !entry.referenceId) return null;
 
   if (entry.referenceType === "POS_TRANSACTION") {

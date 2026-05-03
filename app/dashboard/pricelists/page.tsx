@@ -3,7 +3,13 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { authOptions } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth-helpers';
-import { getAllPricelistsSummary } from '@/services/pricelist.service';
+import {
+  getAllPricelistsSummary,
+} from '@/services/pricelist.service';
+
+type PricelistSummaryRow = Awaited<
+  ReturnType<typeof getAllPricelistsSummary>
+>[number];
 import { Plus } from 'lucide-react';
 import { getServerSession } from 'next-auth/next';
 import Link from 'next/link';
@@ -17,7 +23,7 @@ export default async function PricelistsPage() {
     'PRICELIST_VIEW'
   );
 
-  let pricelists: any[] = [];
+  let pricelists: PricelistSummaryRow[] = [];
   let error: string | null = null;
 
   if (!userPermitted) {
@@ -25,8 +31,8 @@ export default async function PricelistsPage() {
   } else {
     try {
       pricelists = await getAllPricelistsSummary();
-    } catch (err: any) {
-      error = err.message;
+    } catch (err: unknown) {
+      error = err instanceof Error ? err.message : 'Failed to fetch pricelists';
     }
   }
 
@@ -60,12 +66,14 @@ export default async function PricelistsPage() {
       {/* Pricelists List or Empty State */}
       {pricelists.length === 0 ? (
         <EmptyState
-          icon="📋"
+          icon={<span className="text-4xl">📋</span>}
           title="No pricelists yet"
           description="Start by creating your first pricelist to manage product pricing."
-          actionLabel="Create First Pricelist"
-          actionHref="/dashboard/pricelists/new"
-        />
+        >
+          <Link href="/dashboard/pricelists/new">
+            <Button>Create First Pricelist</Button>
+          </Link>
+        </EmptyState>
       ) : (
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           <PricelistList pricelists={pricelists} />

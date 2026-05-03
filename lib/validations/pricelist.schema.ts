@@ -66,6 +66,7 @@ const coerceIntWithDefault = (def: number) =>
 
 const basePricelistRuleSchema = z.object({
   id: z.string().optional(), // Can be UUID for existing rules, or temporary string ID like 'rule-xxx' for new rules
+  priority: z.coerce.number().int().min(0).max(100).optional(),
   appliedTo: z.enum(['PRODUCT', 'CATEGORY', 'CUSTOMER', 'ALL_PRODUCTS']).default('PRODUCT'),
   productId: z.preprocess(
     (val) => (val === null || val === '' ? undefined : val),
@@ -74,6 +75,10 @@ const basePricelistRuleSchema = z.object({
   categoryId: z.preprocess(
     (val) => (val === null || val === '' ? undefined : val),
     z.string().uuid('Category is required').optional()
+  ),
+  customerGroupId: z.preprocess(
+    (val) => (val === null || val === '' ? undefined : val),
+    z.string().uuid().optional()
   ),
   name: z.string().min(1, 'Rule name is required').max(100, 'Rule name must be 100 characters or less').optional(),
   minQuantity: coerceIntWithDefault(1).optional(),
@@ -177,14 +182,34 @@ export type BatchCalculatePriceInput = z.infer<typeof batchCalculatePriceSchema>
 // Form Schemas (for UI forms with nested data)
 // ============================================
 
-// Use a completely permissive schema for the form
-// Allows any rule structure while editing, full validation happens in onSubmit
+/** Single tier row in the pricelist UI (`useFieldArray` needs a concrete object shape). */
+const pricelistRuleFormRowSchema = z
+  .object({
+    id: z.string().optional(),
+    productId: z.string().optional(),
+    name: z.string().optional(),
+    minQuantity: z.number().optional(),
+    maxQuantity: z.number().nullable().optional(),
+    calculationType: z.string().optional(),
+    discountPercentage: z.number().nullable().optional(),
+    fixedPrice: z.number().nullable().optional(),
+    fixedDiscount: z.number().nullable().optional(),
+    formulaMargin: z.number().nullable().optional(),
+    formulaMarkup: z.number().nullable().optional(),
+    isActive: z.boolean().optional(),
+    appliedTo: z.string().optional(),
+    categoryId: z.string().nullable().optional(),
+    customerGroupId: z.string().nullable().optional(),
+    priority: z.number().optional(),
+  })
+  .passthrough();
+
 export const pricelistFormSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(500).optional().or(z.literal('')),
   priority: z.number().int().min(0).max(100).default(0),
   isActive: z.boolean().default(true),
-  rules: z.array(z.record(z.any())).optional(), // Accept any rule structure - validate in onSubmit
+  rules: z.array(pricelistRuleFormRowSchema).optional(),
 });
 
 export type PricelistFormData = z.infer<typeof pricelistFormSchema>;

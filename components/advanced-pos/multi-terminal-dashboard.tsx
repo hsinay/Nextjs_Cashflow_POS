@@ -4,8 +4,6 @@ import { H2, KPICard, Small, StatusBadge } from '@/components/ui';
 import { BorderRadius, Colors, Spacing } from '@/lib/design-tokens';
 import { formatCurrency } from '@/lib/utils';
 import { Terminal, TerminalDashboard } from '@/types/advanced-pos.types';
-import { Activity, AlertCircle, CheckCircle2 } from 'lucide-react';
-
 interface MultiTerminalDashboardProps {
   data: TerminalDashboard;
 }
@@ -98,12 +96,6 @@ function TerminalCard({ terminal }: TerminalCardProps) {
     if (status === 'ACTIVE') return 'APPROVED';
     if (status === 'OFFLINE') return 'REJECTED';
     return 'PENDING';
-  };
-
-  const _getStatusIcon = (status: string) => {
-    if (status === 'ACTIVE') return <CheckCircle2 className="w-4 h-4" />;
-    if (status === 'OFFLINE') return <AlertCircle className="w-4 h-4" />;
-    return <Activity className="w-4 h-4" />;
   };
 
   return (

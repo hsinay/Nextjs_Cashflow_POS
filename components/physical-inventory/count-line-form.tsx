@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AddCountLineInput, addCountLineSchema } from '@/lib/validations/physical-inventory.schema';
-import { Product } from '@/types';
+import { Product } from '@/types/product.types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Loader2, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -75,7 +75,7 @@ export function CountLineForm({ piId }: CountLineFormProps) {
       const filtered = products.filter(
         (p) =>
           p.name.toLowerCase().includes(query) ||
-          p.sku.toLowerCase().includes(query)
+          (p.sku ?? '').toLowerCase().includes(query)
       );
       setFilteredProducts(filtered);
     }
@@ -153,7 +153,7 @@ export function CountLineForm({ piId }: CountLineFormProps) {
         </Alert>
       )}
 
-      <Form form={form}>
+      <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {/* Product Selection with Search */}
@@ -286,7 +286,7 @@ export function CountLineForm({ piId }: CountLineFormProps) {
                 <FormItem>
                   <FormLabel>Batch Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., BATCH-2024-001" {...field} />
+                    <Input placeholder="e.g., BATCH-2024-001" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -301,7 +301,7 @@ export function CountLineForm({ piId }: CountLineFormProps) {
                 <FormItem>
                   <FormLabel>Expiry Date</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -321,6 +321,7 @@ export function CountLineForm({ piId }: CountLineFormProps) {
                     placeholder="Add any notes about this count..."
                     className="h-20"
                     {...field}
+                    value={field.value ?? ''}
                   />
                 </FormControl>
                 <FormMessage />

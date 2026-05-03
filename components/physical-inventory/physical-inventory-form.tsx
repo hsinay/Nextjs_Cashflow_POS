@@ -28,13 +28,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-interface PhysicalInventoryFormProps {
-  isEditing?: boolean;
-}
-
-export function PhysicalInventoryForm({
-  isEditing = false,
-}: PhysicalInventoryFormProps) {
+export function PhysicalInventoryForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

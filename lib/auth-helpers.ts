@@ -57,7 +57,7 @@ export function hasPermission(
     return false;
   }
 
-  const allowedRoles = ROLE_PERMISSIONS[requiredPermission];
+  const allowedRoles = ROLE_PERMISSIONS[requiredPermission] as readonly string[];
   return userRoles.some((role) => allowedRoles.includes(role));
 }
 

@@ -1,7 +1,6 @@
 import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
-import { Decimal } from '@prisma/client/runtime/library';
 import { authOptions } from '@/lib/auth';
 import { createPricelistRule } from '@/services/pricelist.service';
 import { createPricelistRuleSchema } from '@/lib/validations/pricelist.schema';

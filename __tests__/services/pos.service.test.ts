@@ -268,7 +268,7 @@ describe('closePOSSession', () => {
   it('sets totalTransactions to count of transactions in session', async () => {
     (mockPrisma.pOSSession.findUnique as jest.Mock).mockResolvedValue(stubSession());
 
-    const transactions = Array.from({ length: 7 }, (_, i) => ({
+    const transactions = Array.from({ length: 7 }, () => ({
       totalAmount: dec('50'),
       paymentDetails: [{ paymentMethod: 'CASH', amount: dec('50') }],
     }));

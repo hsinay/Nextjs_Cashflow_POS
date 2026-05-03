@@ -18,10 +18,6 @@ import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
-import { z } from 'zod';
-
-type OrderFormValues = z.infer<typeof createPurchaseOrderSchema>;
-type UpdateOrderFormValues = z.infer<typeof updatePurchaseOrderSchema>;
 
 interface PurchaseOrderFormProps {
     suppliers: Supplier[];
@@ -106,7 +102,7 @@ export function PurchaseOrderForm({ suppliers, products, initialData }: Purchase
     }
 
     return (
-        <Form form={form} as="form">
+        <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
                 <Card>
                     <CardHeader>

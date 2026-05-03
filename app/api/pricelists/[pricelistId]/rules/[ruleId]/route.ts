@@ -82,7 +82,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
       // Convert numeric fields to Decimal
       if (['discountPercentage', 'fixedPrice', 'fixedDiscount', 'formulaMargin', 'formulaMarkup'].includes(key)) {
-        updateData[key] = value !== null ? new Decimal(value) : null;
+        updateData[key] =
+          value !== null ? new Decimal(value as number | string) : null;
       } else {
         updateData[key] = value;
       }

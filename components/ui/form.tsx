@@ -10,13 +10,12 @@ import {
   UseFormReturn,
 } from "react-hook-form";
 
-type FormProps<TFieldValues extends FieldValues> = {
-  children: React.ReactNode;
-  form: UseFormReturn<TFieldValues>;
-};
-
-function Form<TFieldValues extends FieldValues>({ children, form }: FormProps<TFieldValues>) {
-  return <FormProvider {...form}>{children}</FormProvider>;
+/** Spread `useForm()` return (`{...form}`) so callers match `FormProvider` props. */
+function Form<TFieldValues extends FieldValues>(
+  props: React.PropsWithChildren<UseFormReturn<TFieldValues>>
+) {
+  const { children, ...formMethods } = props;
+  return <FormProvider {...formMethods}>{children}</FormProvider>;
 }
 
 interface FormFieldContextValue<

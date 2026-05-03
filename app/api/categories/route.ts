@@ -29,12 +29,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<APIRespons
       { status: 200 }
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to fetch categories';
     logger.error({ err: error }, 'Error in GET /api/categories:');
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch categories',
+        error: errorMessage,
       },
       { status: 500 }
     );

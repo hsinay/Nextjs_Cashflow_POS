@@ -84,26 +84,12 @@ describe('Pricelist API Integration Tests', () => {
     it('should reject unauthenticated requests', async () => {
       mockGetServerSession.mockResolvedValue(null);
 
-      const _payload = {
-        name: 'Test Pricelist',
-        priority: 1,
-        currency: 'USD',
-        rules: [],
-      };
-
       // Should return 401 Unauthorized
       expect(mockGetServerSession).not.toBeNull();
     });
 
     it('should reject requests from non-admin users', async () => {
       mockGetServerSession.mockResolvedValue(mockSessionNonAdmin as any);
-
-      const _payload = {
-        name: 'Test Pricelist',
-        priority: 1,
-        currency: 'USD',
-        rules: [],
-      };
 
       // Should return 403 Forbidden since only ADMIN can create
       expect(mockSessionNonAdmin.user.roles).not.toContain('ADMIN');
@@ -205,8 +191,6 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('PUT /api/pricelists/[id]', () => {
-    const _pricelistId = uuidv4();
-
     it('should update pricelist with new data', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
@@ -260,8 +244,6 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('DELETE /api/pricelists/[id]', () => {
-    const _pricelistId = uuidv4();
-
     it('should delete pricelist and cascade delete rules', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
@@ -286,8 +268,6 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('POST /api/pricelists/[id]/rules', () => {
-    const _pricelistId = uuidv4();
-
     it('should create a new rule in pricelist', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
@@ -309,7 +289,6 @@ describe('Pricelist API Integration Tests', () => {
     it('should validate rule data with pricelist currency', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
-      const _pricelistUSD = { currency: 'USD' };
       const invalidRule = {
         appliedTo: 'PRODUCT',
         productId: null, // Missing productId for PRODUCT type
@@ -323,9 +302,6 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('PATCH /api/pricelists/[id]/rules/[ruleId]', () => {
-    const _pricelistId = uuidv4();
-    const _ruleId = uuidv4();
-
     it('should update existing rule', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
@@ -353,9 +329,6 @@ describe('Pricelist API Integration Tests', () => {
   });
 
   describe('DELETE /api/pricelists/[id]/rules/[ruleId]', () => {
-    const _pricelistId2 = uuidv4();
-    const _ruleId2 = uuidv4();
-
     it('should delete rule from pricelist', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
 
@@ -393,11 +366,6 @@ describe('Pricelist API Integration Tests', () => {
 
     it('should return 401 for unauthenticated price calculation', async () => {
       mockGetServerSession.mockResolvedValue(null);
-
-      const _request = {
-        productId: 'product-1',
-        quantity: 10,
-      };
 
       // Should return 401 Unauthorized
       expect(mockGetServerSession()).resolves.toBeNull();
@@ -454,9 +422,6 @@ describe('Pricelist API Integration Tests', () => {
 
     it('should respect pricelist date ranges', async () => {
       mockGetServerSession.mockResolvedValue(mockSession as any);
-
-      const now = new Date();
-      const _pastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       const request = {
         productId: 'product-1',

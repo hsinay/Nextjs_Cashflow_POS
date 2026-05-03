@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server';
  * Delete a payment record (admin only)
  */
 export async function DELETE(
-  req: Request,
+  _req: Request,
   { params }: { params: { id: string; paymentId: string } }
 ) {
   try {

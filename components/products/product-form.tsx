@@ -167,7 +167,7 @@ export function ProductForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form form={form}>
+          <Form {...form}>
             <form
               onSubmit={form.handleSubmit(handleFormSubmit)}
               className="space-y-6"

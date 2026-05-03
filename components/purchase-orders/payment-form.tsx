@@ -163,7 +163,7 @@ export function PaymentForm({
           </DialogDescription>
         </DialogHeader>
 
-        <Form form={form}>
+        <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}

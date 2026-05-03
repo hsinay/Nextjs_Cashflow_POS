@@ -12,22 +12,33 @@ import { useCurrency } from '@/lib/currency-context';
 import { getOptimizedImageUrl } from '@/lib/image-url';
 import { PaymentDetailInput } from '@/types/pos-payment.types';
 import { POSSession } from '@/types/pos.types';
-import { Category, Customer, Product } from '@prisma/client';
+import type { Category, Customer, Product } from '@prisma/client';
 import { ChevronLeft, ChevronRight, Clock, Filter, Heart, Image as ImageIcon, Layers, Minus, Plus, QrCode, Search, ShoppingCart, Trash2, X, Zap } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { POSPaymentPanel } from './pos-payment-panel';
 import { PricelistSelector } from './pricelist-selector';
 
+/** Product row from the POS catalog query (decimals serialized, `visionEmbedding` omitted). */
+export type POSCatalogProduct = Omit<
+  Product,
+  'price' | 'costPrice' | 'taxRate' | 'visionEmbedding'
+> & {
+  price: number;
+  costPrice: number | null;
+  taxRate: number | null;
+  category: Category;
+};
+
 interface POSClientProps {
     initialSession: POSSession | null;
-    products: (Product & { category: any, price: number, costPrice: number | null, taxRate: number | null })[];
+    products: POSCatalogProduct[];
     categories: Category[];
     customers: Customer[];
     cashierId: string;
 }
 
 interface CartItem {
-    product: Product & { category: any, price: number, costPrice: number | null, taxRate: number | null };
+    product: POSCatalogProduct;
     quantity: number;
     unitPrice: number;
     discount: number;
@@ -354,7 +365,7 @@ export function POSClient({ initialSession, products, categories, customers: _cu
 
     // Cart handlers with dynamic pricing support
     const handleAddToCart = async (
-        product: Product & { category: any, price: number, costPrice: number | null, taxRate: number | null },
+        product: POSCatalogProduct,
         quantity: number = 1
     ) => {
         setIsCalculatingPrices(true);
@@ -1215,8 +1226,8 @@ export function POSClient({ initialSession, products, categories, customers: _cu
 
 // Product Card Component
 interface ProductCardProps {
-    product: Product & { category: any, price: number, costPrice: number | null, taxRate: number | null };
-    onAddToCart: (product: Product & { category: any, price: number, costPrice: number | null, taxRate: number | null }) => void;
+    product: POSCatalogProduct;
+    onAddToCart: (product: POSCatalogProduct) => void;
     isFavorite?: boolean;
     onToggleFavorite?: (productId: string) => void;
 }

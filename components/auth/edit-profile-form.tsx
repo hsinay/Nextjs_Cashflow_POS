@@ -17,8 +17,14 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+interface EditProfileUser {
+  username: string;
+  email: string;
+  contactNumber?: string | null;
+}
+
 interface EditProfileFormProps {
-  user: unknown;
+  user: EditProfileUser;
 }
 
 export function EditProfileForm({ user }: EditProfileFormProps) {

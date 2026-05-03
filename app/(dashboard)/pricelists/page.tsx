@@ -3,7 +3,13 @@ import { H1, Small } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { authOptions } from '@/lib/auth';
 import { Colors, Spacing } from '@/lib/design-tokens';
-import { getAllPricelistsSummary } from '@/services/pricelist.service';
+import {
+  getAllPricelistsSummary,
+} from '@/services/pricelist.service';
+
+type PricelistSummaryRow = Awaited<
+  ReturnType<typeof getAllPricelistsSummary>
+>[number];
 import { Plus } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import Link from 'next/link';
@@ -25,8 +31,8 @@ export default async function PricelistsPage() {
     redirect('/dashboard');
   }
 
-  let pricelists = [];
-  let error = null;
+  let pricelists: PricelistSummaryRow[] = [];
+  let error: string | null = null;
 
   try {
     console.log('Fetching pricelists...');
