@@ -32,6 +32,15 @@ class POSReconciliationService {
   async calculateReconciliation(sessionId: string): Promise<ReconciliationData> {
     const session = await prisma.pOSSession.findUnique({
       where: { id: sessionId },
+      include: {
+        dayBook: {
+          select: {
+            id: true,
+            isReconciled: true,
+            notes: true,
+          },
+        },
+      },
     });
 
     if (!session) {
@@ -60,7 +69,8 @@ class POSReconciliationService {
       variance,
       variancePercentage,
       status: variance.toNumber() > 0 ? 'OVERAGE' : variance.toNumber() < 0 ? 'SHORTAGE' : 'BALANCED',
-      reconciled: false,
+      reconciled: session.dayBook?.isReconciled ?? false,
+      notes: session.dayBook?.notes ?? session.notes ?? undefined,
     };
   }
 
@@ -72,14 +82,46 @@ class POSReconciliationService {
     _userId: string,
     notes?: string
   ) {
-    return await prisma.pOSSession.update({
+    const session = await prisma.pOSSession.findUnique({
       where: { id: sessionId },
-      data: {
-        notes: notes,
+      include: {
+        dayBook: true,
       },
+    });
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    if (session.status !== 'CLOSED') {
+      throw new Error('Can only reconcile closed sessions');
+    }
+
+    if (!session.dayBookId) {
+      throw new Error('Session is not linked to a day book');
+    }
+
+    await prisma.dayBook.update({
+      where: { id: session.dayBookId },
+      data: {
+        isReconciled: true,
+        notes: notes ?? session.dayBook?.notes ?? undefined,
+      },
+    });
+
+    return await prisma.pOSSession.findUnique({
+      where: { id: sessionId },
       include: {
         cashier: { select: { id: true, username: true } },
-        dayBook: { select: { id: true, date: true, status: true } },
+        dayBook: {
+          select: {
+            id: true,
+            date: true,
+            status: true,
+            isReconciled: true,
+            notes: true,
+          },
+        },
       },
     });
   }
@@ -135,10 +177,21 @@ class POSReconciliationService {
     return await prisma.pOSSession.findMany({
       where: {
         status: 'CLOSED',
+        OR: [
+          { dayBookId: null },
+          { dayBook: { isReconciled: false } },
+        ],
       },
       include: {
         cashier: { select: { id: true, username: true } },
-        dayBook: { select: { id: true, date: true, status: true } },
+        dayBook: {
+          select: {
+            id: true,
+            date: true,
+            status: true,
+            isReconciled: true,
+          },
+        },
       },
       orderBy: { closedAt: 'desc' },
       take: limit,

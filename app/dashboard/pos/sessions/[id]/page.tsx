@@ -9,7 +9,7 @@ import { formatCurrency } from '@/lib/utils';
 import { SessionStatusBadge } from '@/components/pos/session-status-badge';
 import { SessionCloser } from '@/components/pos/session-closer';
 import { POSSessionWithRelations } from '@/types/pos-session.types';
-import { ArrowLeft, Loader2, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Loader2, ShoppingCart, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SessionDetailPage() {
@@ -289,6 +289,3 @@ export default function SessionDetailPage() {
     </div>
   );
 }
-
-// Add missing import
-import { ShoppingCart } from 'lucide-react';

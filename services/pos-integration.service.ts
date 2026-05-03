@@ -203,7 +203,7 @@ export async function processIntegratedPOSTransaction(
       // STEP 2: INVENTORY & CALCULATIONS
       // ========================================================================
 
-      let totalAmount = toDecimal(0);
+      let subtotalAmount = toDecimal(0);
       let totalTaxAmount = toDecimal(0);
       let totalDiscountAmount = toDecimal(0);
       let totalCOGS = toDecimal(0); // Cost of Goods Sold for COGS ledger entry
@@ -230,7 +230,7 @@ export async function processIntegratedPOSTransaction(
             ? toDecimal(product.costPrice || product.price).times(quantity)
             : toDecimal(0);
 
-          totalAmount = totalAmount.plus(lineTotal);
+          subtotalAmount = subtotalAmount.plus(lineTotal);
           totalTaxAmount = totalTaxAmount.plus(lineTax);
           totalDiscountAmount = totalDiscountAmount.plus(discount);
           totalCOGS = totalCOGS.plus(lineCost);
@@ -253,6 +253,8 @@ export async function processIntegratedPOSTransaction(
           };
         })
       );
+
+      const totalAmount = subtotalAmount.plus(totalTaxAmount);
 
       // ========================================================================
       // STEP 3: CREATE INVENTORY TRANSACTIONS
@@ -287,7 +289,7 @@ export async function processIntegratedPOSTransaction(
           description: `POS Sale - ${transactionNumber}${customerId ? ` (Customer: ${customerId.substring(0, 8)})` : ''}`,
           debitAccount,
           creditAccount: 'Revenue',
-          amount: totalAmount,
+          amount: subtotalAmount,
           referenceId: transactionNumber,
         },
       });
@@ -339,19 +341,28 @@ export async function processIntegratedPOSTransaction(
       // ========================================================================
 
       let pointsEarned = 0;
-      const creditPortion = paymentDetails
-        .filter((pd) => pd.paymentMethod === 'CREDIT')
+      const hasCreditPayment = paymentDetails.some(
+        (pd) => pd.paymentMethod === 'CREDIT'
+      );
+      const nonCreditPortion = paymentDetails
+        .filter((pd) => pd.paymentMethod !== 'CREDIT')
         .reduce((sum, pd) => sum.plus(toDecimal(pd.amount)), toDecimal(0));
-      const collectedAmount = totalAmount.minus(creditPortion);
-      const normalizedCollectedAmount = collectedAmount.lessThan(0)
-        ? toDecimal(0)
-        : collectedAmount;
+      const normalizedCollectedAmount = nonCreditPortion.greaterThan(totalAmount)
+        ? totalAmount
+        : nonCreditPortion;
+
+      if (
+        !hasCreditPayment &&
+        normalizedCollectedAmount.minus(totalAmount).abs().greaterThan(toDecimal(0.01))
+      ) {
+        throw new Error('Payment total must match transaction total');
+      }
 
       if (customerId && customer) {
         // Calculate loyalty points
         pointsEarned = Math.floor(convertToNumber(totalAmount) * loyaltyPointsRate);
 
-        if (creditPortion.gt(0)) {
+        if (hasCreditPayment) {
           const existingOutstanding = await tx.salesOrder.aggregate({
             where: {
               customerId,
@@ -365,7 +376,7 @@ export async function processIntegratedPOSTransaction(
           const currentOutstandingBalance =
             existingOutstanding._sum.balanceAmount ?? toDecimal(0);
           const nextOutstandingBalance =
-            currentOutstandingBalance.plus(creditPortion);
+            currentOutstandingBalance.plus(totalAmount.minus(normalizedCollectedAmount));
 
           if (nextOutstandingBalance.greaterThan(customer.creditLimit)) {
             throw new Error('Credit limit exceeded');
@@ -384,38 +395,31 @@ export async function processIntegratedPOSTransaction(
       // STEP 6: CREATE PAYMENT DETAILS
       // ========================================================================
 
-      const paymentDetailsData = await Promise.all(
-        paymentDetails.map(async (pd, index) => {
-          const amount = toDecimal(pd.amount);
-          const transactionFee = toDecimal(pd.transactionFee || 0);
-          const netAmount = amount.minus(transactionFee);
+      const paymentDetailsData = paymentDetails.map((pd, index) => {
+        const amount =
+          pd.paymentMethod === 'CREDIT' ? toDecimal(0) : toDecimal(pd.amount);
+        const transactionFee = toDecimal(pd.transactionFee || 0);
+        const netAmount = amount.minus(transactionFee);
 
-          // Create payment detail record
-          const paymentDetail = await tx.pOSPaymentDetail.create({
-            data: {
-              transactionId: '', // Will be set after transaction creation
-              paymentMethod: pd.paymentMethod,
-              amount,
-              referenceNumber: pd.referenceNumber,
-              status: 'COMPLETED',
-              notes: pd.notes,
-              sequenceNumber: index + 1,
-              transactionFee,
-              netAmount,
-              cardLast4: pd.cardLast4,
-              cardBrand: pd.cardBrand,
-              authorizationId: pd.authorizationId,
-              walletProvider: pd.walletProvider,
-              upiId: pd.upiId,
-              chequeNumber: pd.chequeNumber,
-              chequeDate: pd.chequeDate,
-              chequeBank: pd.chequeBank,
-            },
-          });
-
-          return paymentDetail;
-        })
-      );
+        return {
+          paymentMethod: pd.paymentMethod,
+          amount,
+          referenceNumber: pd.referenceNumber,
+          status: 'COMPLETED' as const,
+          notes: pd.notes,
+          sequenceNumber: index + 1,
+          transactionFee,
+          netAmount,
+          cardLast4: pd.cardLast4,
+          cardBrand: pd.cardBrand,
+          authorizationId: pd.authorizationId,
+          walletProvider: pd.walletProvider,
+          upiId: pd.upiId,
+          chequeNumber: pd.chequeNumber,
+          chequeDate: pd.chequeDate,
+          chequeBank: pd.chequeBank,
+        };
+      });
 
       // ========================================================================
       // STEP 7: CREATE MAIN TRANSACTION
@@ -530,7 +534,9 @@ export async function processIntegratedPOSTransaction(
         const otherTotal = paymentDetails
           .filter(
             (pd) =>
-              pd.paymentMethod !== 'CASH' && pd.paymentMethod !== 'CARD'
+              pd.paymentMethod !== 'CASH' &&
+              pd.paymentMethod !== 'CARD' &&
+              pd.paymentMethod !== 'CREDIT'
           )
           .reduce((sum, pd) => sum + pd.amount, 0);
 
@@ -544,6 +550,29 @@ export async function processIntegratedPOSTransaction(
             totalDigitalReceived: { increment: toDecimal(otherTotal) },
           },
         });
+
+        if (session?.dayBookId) {
+          const dayBookEntries = paymentDetails
+            .filter((pd) => pd.paymentMethod !== 'CREDIT' && pd.amount > 0)
+            .map((pd) => ({
+              dayBookId: session!.dayBookId!,
+              entryType: 'SALE' as const,
+              entryDate: transaction.createdAt,
+              description: `POS Sale - ${transaction.transactionNumber}`,
+              amount: toDecimal(pd.amount),
+              paymentMethod: pd.paymentMethod as any,
+              referenceType: 'POS_TRANSACTION',
+              referenceId: transaction.id,
+              createdById: cashierId,
+              notes: notes ?? null,
+            }));
+
+          if (dayBookEntries.length > 0) {
+            await tx.dayBookEntry.createMany({
+              data: dayBookEntries,
+            });
+          }
+        }
       }
 
       // ========================================================================
@@ -560,14 +589,10 @@ export async function processIntegratedPOSTransaction(
         paymentMethods: paymentDetails.map((pd) => pd.paymentMethod),
         inventoryEntriesCreated: items.length,
         ledgerEntriesCreated: 3 + (totalCOGS.gt(0) ? 1 : 0) + (totalDiscountAmount.gt(0) ? 1 : 0),
-        customerBalanceUpdated: !!customerId && creditPortion.gt(0),
+        customerBalanceUpdated: !!customerId && totalAmount.minus(normalizedCollectedAmount).gt(0),
       };
     },
-    {
-      // Transaction options
-      maxWait: 10000, // 10 seconds
-      timeout: 30000, // 30 seconds
-    }
+    30000
   );
 }
 
@@ -586,26 +611,10 @@ export function validatePOSIntegrationInput(input: POSIntegrationInput): string[
     errors.push('Payment details are required');
 
   const hasCreditPayment = input.paymentDetails?.some(
-    (pd) => pd.paymentMethod === 'CREDIT' && pd.amount > 0
+    (pd) => pd.paymentMethod === 'CREDIT'
   );
   if (hasCreditPayment && !input.customerId) {
     errors.push('Customer is required for credit POS transactions');
-  }
-
-  // Validate payment total matches transaction total
-  const paymentTotal = input.paymentDetails.reduce(
-    (sum, pd) => sum + pd.amount,
-    0
-  );
-  const itemTotal = input.items.reduce((sum, item) => {
-    const price = (item.unitPrice || 0) * item.quantity;
-    return sum + price - (item.discountApplied || 0);
-  }, 0);
-
-  if (Math.abs(paymentTotal - itemTotal) > 0.01) {
-    errors.push(
-      `Payment total (${paymentTotal}) does not match items total (${itemTotal})`
-    );
   }
 
   return errors;

@@ -3,7 +3,7 @@
 import { H3, Small, StatusBadge } from "@/components/ui";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
-import { Colors, Typography } from "@/lib/design-tokens";
+import { BorderRadius, Colors, Spacing } from "@/lib/design-tokens";
 import { DayBookStatus } from "@prisma/client";
 
 interface DayBook {
@@ -74,13 +74,13 @@ export function DayBookSummary({ daybook }: DayBookSummaryProps) {
 
         {/* Opening Balances */}
         <div className="grid grid-cols-2 gap-4">
-          <div style={{ padding: Typography.spacing.md, backgroundColor: Colors.gray[50], borderRadius: Typography.borderRadius.md }}>
+          <div style={{ padding: Spacing.md, backgroundColor: Colors.gray[50], borderRadius: BorderRadius.md }}>
             <Small color={Colors.text.secondary} className="block mb-1">Opening Cash</Small>
             <p className="text-lg font-semibold" style={{ color: Colors.text.primary }}>
               {formatCurrency(openingCash)}
             </p>
           </div>
-          <div style={{ padding: Typography.spacing.md, backgroundColor: Colors.gray[50], borderRadius: Typography.borderRadius.md }}>
+          <div style={{ padding: Spacing.md, backgroundColor: Colors.gray[50], borderRadius: BorderRadius.md }}>
             <Small color={Colors.text.secondary} className="block mb-1">Opening Bank</Small>
             <p className="text-lg font-semibold" style={{ color: Colors.text.primary }}>
               {formatCurrency(openingBank)}
@@ -91,15 +91,15 @@ export function DayBookSummary({ daybook }: DayBookSummaryProps) {
         {/* Closing Balances - Only show if closed */}
         {daybook.status !== "OPEN" && (
           <div className="grid grid-cols-2 gap-4">
-            <div style={{ padding: Typography.spacing.md, backgroundColor: Colors.primary.light, borderRadius: Typography.borderRadius.md, border: `1px solid ${Colors.primary.lighter}` }}>
+            <div style={{ padding: Spacing.md, backgroundColor: Colors.primary.light, borderRadius: BorderRadius.md, border: `1px solid ${Colors.primary.lighter}` }}>
               <Small color={Colors.primary.start} className="block mb-1">Closing Cash</Small>
-              <p className="text-lg font-semibold" style={{ color: Colors.primary.main }}>
+              <p className="text-lg font-semibold" style={{ color: Colors.primary.start }}>
                 {formatCurrency(closingCash)}
               </p>
             </div>
-            <div style={{ padding: Typography.spacing.md, backgroundColor: Colors.primary.light, borderRadius: Typography.borderRadius.md, border: `1px solid ${Colors.primary.lighter}` }}>
+            <div style={{ padding: Spacing.md, backgroundColor: Colors.primary.light, borderRadius: BorderRadius.md, border: `1px solid ${Colors.primary.lighter}` }}>
               <Small color={Colors.primary.start} className="block mb-1">Closing Bank</Small>
-              <p className="text-lg font-semibold" style={{ color: Colors.primary.main }}>
+              <p className="text-lg font-semibold" style={{ color: Colors.primary.start }}>
                 {formatCurrency(closingBank)}
               </p>
             </div>
@@ -111,13 +111,13 @@ export function DayBookSummary({ daybook }: DayBookSummaryProps) {
           <div style={{ borderTop: `1px solid ${Colors.gray[200]}`, paddingTop: '16px', display: "flex", flexDirection: "column", gap: '12px' }}>
             <Small className="font-semibold" style={{ color: Colors.text.primary }}>Reconciliation</Small>
             <div className="grid grid-cols-2 gap-3">
-              <div style={{ padding: Typography.spacing.sm, backgroundColor: Colors.gray[50], borderRadius: Typography.borderRadius.md }}>
+              <div style={{ padding: Spacing.sm, backgroundColor: Colors.gray[50], borderRadius: BorderRadius.md }}>
                 <Small color={Colors.text.secondary} className="block mb-1">Expected Cash</Small>
                 <p className="font-semibold" style={{ color: Colors.text.primary }}>
                   {formatCurrency(expectedCash)}
                 </p>
               </div>
-              <div style={{ padding: Typography.spacing.sm, backgroundColor: Colors.gray[50], borderRadius: Typography.borderRadius.md }}>
+              <div style={{ padding: Spacing.sm, backgroundColor: Colors.gray[50], borderRadius: BorderRadius.md }}>
                 <Small color={Colors.text.secondary} className="block mb-1">Actual Cash</Small>
                 <p className="font-semibold" style={{ color: Colors.text.primary }}>
                   {formatCurrency(actualCash)}
@@ -128,23 +128,23 @@ export function DayBookSummary({ daybook }: DayBookSummaryProps) {
             {/* Variance Display */}
             <div
               style={{
-                padding: Typography.spacing.md,
-                backgroundColor: daybook.isReconciled ? Colors.status.paid.light : Colors.status.rejected.light,
-                border: `1px solid ${daybook.isReconciled ? Colors.status.paid.lighter : Colors.status.rejected.lighter}`,
-                borderRadius: Typography.borderRadius.md
+                padding: Spacing.md,
+                backgroundColor: daybook.isReconciled ? Colors.status.paid.light : Colors.status.overdue.light,
+                border: `1px solid ${daybook.isReconciled ? Colors.status.paid.light : Colors.status.overdue.light}`,
+                borderRadius: BorderRadius.md
               }}
             >
               <Small color={Colors.text.secondary} className="block mb-1">Variance</Small>
               <p
                 className="text-lg font-semibold"
                 style={{
-                  color: daybook.isReconciled ? Colors.status.paid.main : Colors.status.rejected.main
+                  color: daybook.isReconciled ? Colors.status.paid.dark : Colors.status.overdue.dark
                 }}
               >
                 {variance >= 0 ? "+" : ""}{formatCurrency(variance)}
               </p>
               {daybook.isReconciled && (
-                <Small color={Colors.status.paid.main} className="mt-2 block">✓ Reconciled</Small>
+                <Small color={Colors.status.paid.dark} className="mt-2 block">✓ Reconciled</Small>
               )}
             </div>
           </div>
@@ -152,7 +152,7 @@ export function DayBookSummary({ daybook }: DayBookSummaryProps) {
 
         {/* Entry count */}
         {daybook._count && (
-          <div style={{ borderTop: `1px solid ${Colors.gray[200]}`, paddingTop: Typography.spacing.lg }}>
+          <div style={{ borderTop: `1px solid ${Colors.gray[200]}`, paddingTop: Spacing.lg }}>
             <Small color={Colors.text.secondary}>
               <span className="font-semibold" style={{ color: Colors.text.primary }}>{daybook._count.entries}</span>{" "}
               transaction{daybook._count.entries !== 1 ? "s" : ""}

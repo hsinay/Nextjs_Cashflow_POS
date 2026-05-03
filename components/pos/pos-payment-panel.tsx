@@ -150,55 +150,21 @@ export function POSPaymentPanel({
 
     setIsConfirming(true);
     try {
+      const recordedAmount =
+        paymentMethod === 'CREDIT' ? paidNum : Math.min(paidNum, orderTotal);
+
       const paymentData: PaymentDetailInput = {
         paymentMethod,
-        amount: paidNum,
+        amount: recordedAmount,
         ...(selectedCustomer && { customerId: selectedCustomer.id }),
       };
 
       // Execute payment confirmation
       await onConfirmPayment(paymentData);
 
-      // Update POS session totals
-      try {
-        await fetch(`/api/pos-sessions/${session.id}/update-totals`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            paymentMethod,
-            amount: paidNum,
-          }),
-        });
-      } catch (sessionUpdateError) {
-        console.error('Failed to update session totals:', sessionUpdateError);
-        // Don't fail payment if session update fails, just log it
-      }
-
-      // Create day book entry
-      if (session.dayBookId) {
-        try {
-          await fetch(`/api/daybook/${session.dayBookId}/entries`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              entryType: 'SALE',
-              entryDate: new Date().toISOString(),
-              description: `POS Sale - ${paymentMethod}`,
-              amount: paidNum,
-              paymentMethod,
-              referenceId: session.id,
-              referenceType: 'POS_SESSION',
-            }),
-          });
-        } catch (dayBookError) {
-          console.error('Failed to create day book entry:', dayBookError);
-          // Don't fail payment if day book entry fails
-        }
-      }
-
       toast({
         title: 'Success',
-        description: `Payment of ${formatCurrency(paidNum)} processed successfully.`,
+        description: `Payment of ${formatCurrency(recordedAmount)} processed successfully.`,
       });
 
       onClose();

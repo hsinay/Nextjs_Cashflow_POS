@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
 import { DayBookEntryType, PaymentMethod } from "@prisma/client";
-import { Trash2 } from "lucide-react";
+import { ExternalLink, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +26,8 @@ interface DayBookEntry {
   description: string;
   amount: number | { toNumber: () => number };
   paymentMethod?: PaymentMethod;
+  referenceType?: "SALES_ORDER" | "PURCHASE_ORDER" | "POS_TRANSACTION" | "PAYMENT" | string | null;
+  referenceId?: string | null;
   partyName?: string;
   createdBy?: { username: string };
 }
@@ -50,6 +53,24 @@ const entryTypeColors: Record<string, string> = {
   BANK_DEPOSIT: "bg-cyan-100 text-cyan-800",
   BANK_WITHDRAWAL: "bg-indigo-100 text-indigo-800",
 };
+
+function getReferenceHref(entry: DayBookEntry): string | null {
+  if (!entry.referenceType || !entry.referenceId) return null;
+
+  if (entry.referenceType === "POS_TRANSACTION") {
+    return `/dashboard/pos/transactions/${entry.referenceId}`;
+  }
+
+  if (entry.referenceType === "SALES_ORDER") {
+    return `/dashboard/sales-orders/${entry.referenceId}`;
+  }
+
+  if (entry.referenceType === "PURCHASE_ORDER") {
+    return `/dashboard/purchase-orders/${entry.referenceId}`;
+  }
+
+  return null;
+}
 
 export function EntriesList({
   entries,
@@ -127,6 +148,11 @@ export function EntriesList({
                     By: {entry.createdBy.username}
                   </span>
                 )}
+                {entry.referenceType && entry.referenceId && (
+                  <span className="text-gray-600">
+                    Ref: {entry.referenceType.replace(/_/g, " ")}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -136,6 +162,15 @@ export function EntriesList({
                   {formatCurrency(getValue(entry.amount))}
                 </p>
               </div>
+
+              {getReferenceHref(entry) && (
+                <Link href={getReferenceHref(entry)!}>
+                  <Button variant="outline" size="sm">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                </Link>
+              )}
 
               {isOpen && (
                 <Button

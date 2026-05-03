@@ -55,6 +55,36 @@ export const posSessionService = {
    * Automatically creates or links to day book for current date
    */
   async createSession(input: CreatePOSSessionInput): Promise<POSSessionWithRelations> {
+    const existingSession = await prisma.pOSSession.findFirst({
+      where: {
+        cashierId: input.cashierId,
+        status: 'OPEN',
+      },
+      include: {
+        cashier: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+        dayBook: {
+          select: {
+            id: true,
+            date: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        openedAt: 'desc',
+      },
+    });
+
+    if (existingSession) {
+      return existingSession as POSSessionWithRelations;
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -221,16 +251,46 @@ export const posSessionService = {
       throw new Error(`Cannot close session with status ${session.status}`);
     }
 
-    // Calculate variance
-    const expectedCash = new Decimal(input.closingCashAmount);
-    const variance = expectedCash.minus(session.openingCashAmount);
+    const transactions = await prisma.transaction.findMany({
+      where: { sessionId },
+      include: { paymentDetails: true },
+    });
+
+    let totalSalesAmount = new Decimal(0);
+    let totalCashReceived = new Decimal(0);
+    let totalCardReceived = new Decimal(0);
+    let totalDigitalReceived = new Decimal(0);
+
+    for (const transaction of transactions) {
+      totalSalesAmount = totalSalesAmount.plus(transaction.totalAmount);
+      for (const payment of transaction.paymentDetails) {
+        if (payment.paymentMethod === 'CASH') {
+          totalCashReceived = totalCashReceived.plus(payment.amount);
+        } else if (payment.paymentMethod === 'CARD') {
+          totalCardReceived = totalCardReceived.plus(payment.amount);
+        } else if (payment.paymentMethod !== 'CREDIT') {
+          totalDigitalReceived = totalDigitalReceived.plus(payment.amount);
+        }
+      }
+    }
+
+    const actualClosingCash = new Decimal(input.closingCashAmount);
+    const expectedCash = new Decimal(session.openingCashAmount).plus(
+      totalCashReceived
+    );
+    const variance = actualClosingCash.minus(expectedCash);
 
     // Update session
     const closedSession = await prisma.pOSSession.update({
       where: { id: sessionId },
       data: {
         status: 'CLOSED',
-        closingCashAmount: expectedCash,
+        closingCashAmount: actualClosingCash,
+        totalSalesAmount,
+        totalCashReceived,
+        totalCardReceived,
+        totalDigitalReceived,
+        totalTransactions: transactions.length,
         cashVariance: variance,
         closedAt: new Date(),
         notes: input.notes,
@@ -267,14 +327,7 @@ export const posSessionService = {
   ): Promise<void> {
     const decimalAmount = new Decimal(amount);
 
-    const updateData: any = {
-      totalSalesAmount: {
-        increment: decimalAmount,
-      },
-      totalTransactions: {
-        increment: 1,
-      },
-    };
+    const updateData: any = {};
 
     // Update specific payment method total
     if (paymentMethod === 'CASH') {
@@ -291,10 +344,12 @@ export const posSessionService = {
       };
     }
 
-    await prisma.pOSSession.update({
-      where: { id: sessionId },
-      data: updateData,
-    });
+    if (Object.keys(updateData).length > 0) {
+      await prisma.pOSSession.update({
+        where: { id: sessionId },
+        data: updateData,
+      });
+    }
   },
 
   /**

@@ -4,6 +4,7 @@ import { POSSessionHistoryClient } from '@/components/pos/pos-session-history-cl
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { authOptions } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { ArrowLeft } from 'lucide-react';
 import { getServerSession } from 'next-auth';
@@ -19,6 +20,19 @@ interface POSHistoryPageProps {
     page?: string;
     limit?: string;
   };
+}
+
+function getDatabaseErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    if (
+      error.message.includes("Can't reach database server") ||
+      error.message.includes('Invalid `prisma.')
+    ) {
+      return 'The database is temporarily unavailable. Please try again in a moment.';
+    }
+  }
+
+  return 'Unable to load POS session history right now.';
 }
 
 export default async function POSHistoryPage({ searchParams }: POSHistoryPageProps) {
@@ -53,59 +67,93 @@ export default async function POSHistoryPage({ searchParams }: POSHistoryPagePro
   const limit = searchParams.limit ? parseInt(searchParams.limit) : 20;
   const skip = (page - 1) * limit;
 
-  const [sessions, total, cashiers] = await Promise.all([
-    prisma.pOSSession.findMany({
-      where: whereClause,
-      include: {
-        cashier: { select: { id: true, username: true, email: true } },
-        dayBook: { select: { id: true, date: true, status: true } },
-      },
-      orderBy: { openedAt: 'desc' },
-      skip,
-      take: limit,
-    }),
-    prisma.pOSSession.count({ where: whereClause }),
-    prisma.user.findMany({ orderBy: { username: 'asc' } }),
-  ]);
+  try {
+    const [sessions, total, cashiers] = await Promise.all([
+      prisma.pOSSession.findMany({
+        where: whereClause,
+        include: {
+          cashier: { select: { id: true, username: true, email: true } },
+          dayBook: { select: { id: true, date: true, status: true } },
+        },
+        orderBy: { openedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.pOSSession.count({ where: whereClause }),
+      prisma.user.findMany({ orderBy: { username: 'asc' } }),
+    ]);
 
-  const pagination = {
-    page,
-    limit,
-    total,
-    pages: Math.ceil(total / limit),
-  };
+    const pagination = {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/dashboard/pos/dashboard">
-          <Button variant="ghost" className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-bold">POS Session History</h1>
-        <p className="text-gray-600 mt-1">View and manage all POS sessions</p>
-      </div>
-
-      {sessions.length === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-gray-600 mb-4">No sessions found</p>
+    return (
+      <div className="space-y-6">
+        <div>
           <Link href="/dashboard/pos/dashboard">
-            <Button>Open New Session</Button>
+            <Button variant="ghost" className="mb-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
           </Link>
+          <h1 className="text-3xl font-bold">POS Session History</h1>
+          <p className="text-gray-600 mt-1">View and manage all POS sessions</p>
+        </div>
+
+        {sessions.length === 0 ? (
+          <Card className="p-12 text-center">
+            <p className="text-gray-600 mb-4">No sessions found</p>
+            <Link href="/dashboard/pos/dashboard">
+              <Button>Open New Session</Button>
+            </Link>
+          </Card>
+        ) : (
+          <POSSessionHistoryClient
+            sessions={sessions}
+            cashiers={cashiers}
+            pagination={pagination}
+            initialStatus={searchParams.status}
+            initialCashierId={searchParams.cashierId}
+            initialStartDate={searchParams.startDate}
+            initialEndDate={searchParams.endDate}
+          />
+        )}
+      </div>
+    );
+  } catch (error) {
+    logger.error('Failed to load POS session history:', error);
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <Link href="/dashboard/pos/dashboard">
+            <Button variant="ghost" className="mb-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold">POS Session History</h1>
+          <p className="text-gray-600 mt-1">View and manage all POS sessions</p>
+        </div>
+
+        <Card className="p-12 text-center">
+          <p className="text-gray-900 font-semibold mb-2">
+            POS history is temporarily unavailable
+          </p>
+          <p className="text-gray-600 mb-6">{getDatabaseErrorMessage(error)}</p>
+          <div className="flex items-center justify-center gap-3">
+            <Link href="/dashboard/pos/history">
+              <Button>Retry</Button>
+            </Link>
+            <Link href="/dashboard/pos/dashboard">
+              <Button variant="outline">Back to Dashboard</Button>
+            </Link>
+          </div>
         </Card>
-      ) : (
-        <POSSessionHistoryClient
-          sessions={sessions}
-          cashiers={cashiers}
-          pagination={pagination}
-          initialStatus={searchParams.status}
-          initialCashierId={searchParams.cashierId}
-          initialStartDate={searchParams.startDate}
-          initialEndDate={searchParams.endDate}
-        />
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
 }

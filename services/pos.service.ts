@@ -44,15 +44,62 @@ export async function openPOSSession(data: CreatePOSSessionInput): Promise<POSSe
         return openPOSSession({ ...data, cashierId: userByUsername.id });
     }
 
+    const existingOpenSession = await prisma.pOSSession.findFirst({
+        where: {
+            cashierId,
+            status: 'OPEN',
+        },
+        include: {
+            cashier: true,
+            dayBook: true,
+        },
+        orderBy: {
+            openedAt: 'desc',
+        },
+    });
+
+    if (existingOpenSession) {
+        return {
+            ...existingOpenSession,
+            openingCashAmount: convertToNumber(existingOpenSession.openingCashAmount),
+            closingCashAmount: convertToNumber(existingOpenSession.closingCashAmount),
+            totalSalesAmount: convertToNumber(existingOpenSession.totalSalesAmount),
+            totalCashReceived: convertToNumber(existingOpenSession.totalCashReceived),
+            totalCardReceived: convertToNumber(existingOpenSession.totalCardReceived),
+            totalDigitalReceived: convertToNumber(existingOpenSession.totalDigitalReceived),
+            cashVariance: convertToNumber(existingOpenSession.cashVariance),
+        };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let dayBook = await prisma.dayBook.findUnique({
+        where: { date: today },
+    });
+
+    if (!dayBook) {
+        dayBook = await prisma.dayBook.create({
+            data: {
+                date: today,
+                openingCashBalance: new Prisma.Decimal(openingCashAmount),
+                openingBankBalance: new Prisma.Decimal(0),
+                status: 'OPEN',
+                openedById: cashierId,
+            },
+        });
+    }
+
     const session = await prisma.pOSSession.create({
         data: {
             cashierId,
             terminalId,
+            dayBookId: dayBook.id,
             openingCashAmount: new Prisma.Decimal(openingCashAmount),
             notes,
             status: 'OPEN',
         },
-        include: { cashier: true },
+        include: { cashier: true, dayBook: true },
     });
     return {
         ...session,
@@ -91,7 +138,7 @@ export async function closePOSSession(sessionId: string, data: UpdatePOSSessionI
                 totalCashReceived = totalCashReceived.plus(payment.amount);
             } else if (payment.paymentMethod === 'CARD') {
                 totalCardReceived = totalCardReceived.plus(payment.amount);
-            } else {
+            } else if (payment.paymentMethod !== 'CREDIT') {
                 totalDigitalReceived = totalDigitalReceived.plus(payment.amount);
             }
         }
@@ -192,8 +239,12 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
         const cashier = await tx.user.findUnique({ where: { id: cashierId } });
         if (!cashier) throw new NotFoundError('Cashier not found');
         
+        let session: { id: string; status: string; dayBookId: string | null } | null = null;
         if (sessionId) {
-            const session = await tx.pOSSession.findUnique({ where: { id: sessionId } });
+            session = await tx.pOSSession.findUnique({
+                where: { id: sessionId },
+                select: { id: true, status: true, dayBookId: true },
+            });
             if (!session || session.status !== 'OPEN') {
                 throw new BadRequestError('Active POS Session not found');
             }
@@ -204,7 +255,7 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
             if (!customer) throw new NotFoundError('Customer not found');
         }
 
-        let totalAmount = new Prisma.Decimal(0);
+        let subtotalAmount = new Prisma.Decimal(0);
         let totalTaxAmount = new Prisma.Decimal(0);
         let totalDiscountAmount = new Prisma.Decimal(0);
 
@@ -222,7 +273,7 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
                 const itemTotalPrice = unitPrice.times(quantity).minus(discountApplied);
                 const itemTaxAmount = itemTotalPrice.times(taxRate.dividedBy(100));
                 
-                totalAmount = totalAmount.plus(itemTotalPrice);
+                subtotalAmount = subtotalAmount.plus(itemTotalPrice);
                 totalTaxAmount = totalTaxAmount.plus(itemTaxAmount);
                 totalDiscountAmount = totalDiscountAmount.plus(discountApplied);
 
@@ -252,20 +303,31 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
             })
         );
 
+        const totalAmount = subtotalAmount.plus(totalTaxAmount);
+
         // Determine main payment method (simplified for now, can be MIXED)
         // Both PaymentMethod and TransactionPaymentMethod have same values, convert to raw string
         const firstPaymentMethod = paymentDetails.length > 0 ? String(paymentDetails[0].paymentMethod) : 'CASH';
         const mainPaymentMethodStr = paymentDetails.length > 1 ? 'MIXED' : firstPaymentMethod;
         const isCreditSale = paymentDetails.some(pd => pd.paymentMethod === 'CREDIT');
-        const upfrontCreditPaymentAmount = isCreditSale
-            ? paymentDetails
-                .filter(pd => pd.paymentMethod === 'CREDIT')
-                .reduce((sum, pd) => sum.plus(new Prisma.Decimal(pd.amount)), new Prisma.Decimal(0))
-            : new Prisma.Decimal(0);
-        const rawRemainingCreditBalance = totalAmount.minus(upfrontCreditPaymentAmount);
+        const immediatePaymentAmount = paymentDetails
+            .filter(pd => pd.paymentMethod !== 'CREDIT')
+            .reduce((sum, pd) => sum.plus(new Prisma.Decimal(pd.amount)), new Prisma.Decimal(0));
+        const normalizedImmediatePaymentAmount = immediatePaymentAmount.greaterThan(totalAmount)
+            ? totalAmount
+            : immediatePaymentAmount;
+        const rawRemainingCreditBalance = totalAmount.minus(normalizedImmediatePaymentAmount);
         const remainingCreditBalance = rawRemainingCreditBalance.greaterThan(0)
             ? rawRemainingCreditBalance
             : new Prisma.Decimal(0);
+
+        if (!isCreditSale && normalizedImmediatePaymentAmount.minus(totalAmount).abs().greaterThan(new Prisma.Decimal(0.01))) {
+            throw new BadRequestError('Payment total must match transaction total');
+        }
+
+        if (isCreditSale && immediatePaymentAmount.greaterThan(totalAmount)) {
+            throw new BadRequestError('Immediate payment cannot exceed transaction total');
+        }
 
         const transaction = await (tx as any).transaction.create({
             data: {
@@ -283,7 +345,9 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
                 paymentDetails: {
                     create: paymentDetails.map(pd => ({
                         paymentMethod: pd.paymentMethod,
-                        amount: new Prisma.Decimal(pd.amount),
+                        amount: pd.paymentMethod === 'CREDIT'
+                            ? new Prisma.Decimal(0)
+                            : new Prisma.Decimal(pd.amount),
                         referenceNumber: pd.referenceNumber,
                         status: 'COMPLETED',
                     })),
@@ -323,7 +387,7 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
                 const initialPaymentStatus =
                     remainingCreditBalance.lessThanOrEqualTo(0)
                         ? 'PAID'
-                        : upfrontCreditPaymentAmount.greaterThan(0)
+                        : normalizedImmediatePaymentAmount.greaterThan(0)
                             ? 'PARTIALLY_PAID'
                             : 'UNPAID';
 
@@ -334,7 +398,7 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
                         orderDate: transaction.createdAt,
                         status: remainingCreditBalance.lessThanOrEqualTo(0) ? 'PAID' : 'CONFIRMED',
                         totalAmount,
-                        paidAmount: upfrontCreditPaymentAmount,
+                        paidAmount: normalizedImmediatePaymentAmount,
                         paymentStatus: initialPaymentStatus,
                         balanceAmount: remainingCreditBalance,
                         items: {
@@ -350,12 +414,14 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
                     },
                 });
 
-                if (upfrontCreditPaymentAmount.greaterThan(0)) {
+                if (normalizedImmediatePaymentAmount.greaterThan(0)) {
+                    const firstImmediateMethod =
+                        paymentDetails.find(pd => pd.paymentMethod !== 'CREDIT')?.paymentMethod ?? 'CASH';
                     await createPaymentFromTransaction(
                         transaction.id,
                         customerId,
-                        convertToNumber(upfrontCreditPaymentAmount),
-                        'CREDIT',
+                        convertToNumber(normalizedImmediatePaymentAmount),
+                        String(firstImmediateMethod),
                         tx,
                         salesOrder.id,
                         transaction.createdAt,
@@ -414,11 +480,35 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
                                 .reduce((sum, pd) => sum.plus(new Prisma.Decimal(pd.amount)), new Prisma.Decimal(0)),
                     },
                     totalDigitalReceived: {
-                        increment: paymentDetails.filter(pd => pd.paymentMethod !== 'CASH' && pd.paymentMethod !== 'CARD')
+                        increment: paymentDetails
+                                .filter(pd => pd.paymentMethod !== 'CASH' && pd.paymentMethod !== 'CARD' && pd.paymentMethod !== 'CREDIT')
                                 .reduce((sum, pd) => sum.plus(new Prisma.Decimal(pd.amount)), new Prisma.Decimal(0)),
                     },
                 },
             });
+        }
+
+        if (session?.dayBookId) {
+            const dayBookEntries = paymentDetails
+                .filter(pd => pd.paymentMethod !== 'CREDIT' && pd.amount > 0)
+                .map(pd => ({
+                    dayBookId: session!.dayBookId!,
+                    entryType: 'SALE' as const,
+                    entryDate: transaction.createdAt,
+                    description: `POS Sale - ${transaction.transactionNumber}`,
+                    amount: new Prisma.Decimal(pd.amount),
+                    paymentMethod: pd.paymentMethod as any,
+                    referenceType: 'POS_TRANSACTION',
+                    referenceId: transaction.id,
+                    createdById: cashierId,
+                    notes: notes ?? null,
+                }));
+
+            if (dayBookEntries.length > 0) {
+                await tx.dayBookEntry.createMany({
+                    data: dayBookEntries,
+                });
+            }
         }
 
         // Create Payment record and ledger entries for the transaction, but not for credit sales
