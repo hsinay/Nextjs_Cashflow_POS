@@ -9,9 +9,10 @@
  * - Response formats
  */
 
+import { randomUUID } from 'crypto';
 import { getServerSession } from 'next-auth';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const uuidv4: () => string = require('uuid').v4;
+
+const uuidv4 = (): string => randomUUID();
 
 // Mock next-auth
 jest.mock('next-auth', () => ({
