@@ -18,6 +18,7 @@ export default async function POSPage() {
   const [productsRaw, customers] = await Promise.all([
     prisma.product.findMany({
       where: { isActive: true },
+      omit: { visionEmbedding: true },
       include: { category: true },
       orderBy: { name: 'asc' },
     }),

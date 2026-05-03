@@ -98,7 +98,7 @@ export async function getAllProducts(filters: ProductFilters): Promise<Paginated
       isActive: true,
       categoryId: true,
       aiTags: true,
-      visionEmbedding: true,
+      visionEmbedding: false,
       createdAt: true,
       updatedAt: true,
       category: {

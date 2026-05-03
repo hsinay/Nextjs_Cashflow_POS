@@ -75,7 +75,7 @@ export function PricelistList({ pricelists, error }: PricelistListProps) {
     );
   }
 
-  if (pricelists.length === 0) {
+  if (!pricelists || pricelists.length === 0) {
     return (
       <Card style={{ padding: Spacing.xxxl, textAlign: 'center' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '600', color: Colors.text.primary, marginBottom: Spacing.sm }}>
@@ -149,13 +149,13 @@ export function PricelistList({ pricelists, error }: PricelistListProps) {
                   <div>
                     <Small color={Colors.text.secondary}>Rules</Small>
                     <p style={{ fontWeight: '600', color: Colors.text.primary }}>
-                      {pricelist.rules.length}
+                      {pricelist._count?.rules ?? pricelist.rules?.length ?? 0}
                     </p>
                   </div>
                   <div>
                     <Small color={Colors.text.secondary}>Products Covered</Small>
                     <p style={{ fontWeight: '600', color: Colors.text.primary }}>
-                      {pricelist.items.length}
+                      {pricelist._count?.items ?? pricelist.items?.length ?? 0}
                     </p>
                   </div>
                   <div>

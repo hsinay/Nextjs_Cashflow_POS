@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.error('Change password error:', error);
+    logger.error({ err: error }, 'Change password error');
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

@@ -1,0 +1,146 @@
+name: Nightly Deep QA
+
+on:
+  schedule:
+    # Runs at 02:00 UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      coverage_threshold:
+        description: 'Minimum coverage threshold (0–100)'
+        required: false
+        default: '70'
+
+env:
+  NODE_VERSION: '20'
+  DATABASE_URL: postgresql://test:test@localhost:5432/testdb
+  DIRECT_URL: postgresql://test:test@localhost:5432/testdb
+  NEXTAUTH_SECRET: nightly-test-secret
+  NEXTAUTH_URL: http://localhost:3000
+  IMAGEKIT_PUBLIC_KEY: test-public-key
+  IMAGEKIT_PRIVATE_KEY: test-private-key
+  IMAGEKIT_URL_ENDPOINT: https://ik.imagekit.io/test
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Full test suite with coverage enforcement
+  # ---------------------------------------------------------------------------
+  deep-test:
+    name: Full Test Suite + Coverage Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run all tests with verbose output
+        run: npm run test:coverage -- --ci --verbose --forceExit --passWithNoTests
+        env:
+          CI: true
+
+      - name: Upload detailed coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-coverage-${{ github.run_id }}
+          path: coverage/
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # TypeScript strict mode audit
+  # ---------------------------------------------------------------------------
+  ts-audit:
+    name: TypeScript Strict Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Strict type check
+        run: npx tsc --noEmit --strict
+
+  # ---------------------------------------------------------------------------
+  # Dependency security audit
+  # ---------------------------------------------------------------------------
+  security-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (high severity)
+        run: npm audit --audit-level=high
+
+  # ---------------------------------------------------------------------------
+  # Build verification on latest dependencies
+  # ---------------------------------------------------------------------------
+  build-verify:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [deep-test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Production build
+        run: npm run build
+        env:
+          SKIP_ENV_VALIDATION: true
+
+  # ---------------------------------------------------------------------------
+  # Notify on failure
+  # ---------------------------------------------------------------------------
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [deep-test, ts-audit, security-audit, build-verify]
+    if: failure()
+    steps:
+      - name: Create GitHub issue on nightly failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Nightly QA] Failure on ${new Date().toISOString().split('T')[0]}`,
+              body: `The nightly QA pipeline failed.\n\nRun: ${runUrl}`,
+              labels: ['bug', 'qa', 'automated'],
+            });

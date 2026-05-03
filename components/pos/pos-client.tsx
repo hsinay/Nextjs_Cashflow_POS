@@ -14,7 +14,7 @@ import { PaymentDetailInput } from '@/types/pos-payment.types';
 import { POSSession } from '@/types/pos.types';
 import { Category, Customer, Product } from '@prisma/client';
 import { ChevronLeft, ChevronRight, Clock, Filter, Heart, Image as ImageIcon, Layers, Minus, Plus, QrCode, Search, ShoppingCart, Trash2, X, Zap } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { POSPaymentPanel } from './pos-payment-panel';
 import { PricelistSelector } from './pricelist-selector';
 
@@ -93,6 +93,20 @@ export function POSClient({ initialSession, products, categories, customers: _cu
         minPrice: null,
         maxPrice: null,
     });
+
+    // Separate input display value from the deferred filter computation.
+    // startTransition marks the filter update as low-priority so React can
+    // interrupt it and keep the text box responsive on every keystroke.
+    const [searchInput, setSearchInput] = useState('');
+    const [, startSearchTransition] = useTransition();
+    const [currentTime, setCurrentTime] = useState<string | null>(null);
+
+    const handleSearchChange = useCallback((value: string) => {
+        setSearchInput(value);
+        startSearchTransition(() => {
+            setFilters(prev => ({ ...prev, searchQuery: value }));
+        });
+    }, []);
 
     const { toast } = useToast();
     const { formatCurrency } = useCurrency();
@@ -202,6 +216,13 @@ export function POSClient({ initialSession, products, categories, customers: _cu
         }
     };
 
+    // Clock — only runs on client to avoid SSR/hydration mismatch
+    useEffect(() => {
+        setCurrentTime(new Date().toLocaleString());
+        const timer = setInterval(() => setCurrentTime(new Date().toLocaleString()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     // Auto-open session
     useEffect(() => {
         const autoOpenSession = async () => {
@@ -261,16 +282,28 @@ export function POSClient({ initialSession, products, categories, customers: _cu
         }
     };
 
-    // Filter products
-    const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
-            p.sku?.toLowerCase().includes(filters.searchQuery.toLowerCase());
+    // Memoized category product counts (O(N) single pass instead of O(N²) per render)
+    const categoryProductCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        products.forEach(p => {
+            if (p.categoryId) {
+                counts.set(p.categoryId, (counts.get(p.categoryId) || 0) + 1);
+            }
+        });
+        return counts;
+    }, [products]);
+
+    // Filter products — only recomputes when filter state or products actually change
+    const filteredProducts = useMemo(() => products.filter(p => {
+        const q = filters.searchQuery.toLowerCase();
+        const matchesSearch = !q || p.name.toLowerCase().includes(q) ||
+            (p.sku?.toLowerCase().includes(q) ?? false);
         const matchesCategory = !filters.categoryId || p.categoryId === filters.categoryId;
         const matchesStock = !filters.inStockOnly || p.stockQuantity > 0;
         const matchesPrice = (!filters.minPrice || p.price >= filters.minPrice) &&
             (!filters.maxPrice || p.price <= filters.maxPrice);
         return matchesSearch && matchesCategory && matchesStock && matchesPrice;
-    });
+    }), [products, filters.searchQuery, filters.categoryId, filters.inStockOnly, filters.minPrice, filters.maxPrice]);
 
 
 
@@ -447,13 +480,13 @@ export function POSClient({ initialSession, products, categories, customers: _cu
     };
 
     // Phase 2: Toggle favorite
-    const toggleFavorite = (productId: string) => {
+    const toggleFavorite = useCallback((productId: string) => {
         setFavoriteProducts(prev =>
             prev.includes(productId)
                 ? prev.filter(id => id !== productId)
                 : [...prev, productId]
         );
-    };
+    }, []);
 
     const handleOpenPaymentPanel = () => {
         if (!session?.id || session.status !== 'OPEN') {
@@ -552,9 +585,11 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                         <Layers className="w-3 h-3" />
                         <span className="hidden sm:inline">{sidebarAutoHide ? 'Auto-hide ON' : 'Auto-hide'}</span>
                     </button>
-                    <div className="text-xs text-gray-500">
-                        {new Date().toLocaleString()}
-                    </div>
+                    {currentTime && (
+                        <div className="text-xs text-gray-500">
+                            {currentTime}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -831,8 +866,8 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                                         >
                                             All Products
                                         </button>
-                                        {categories.filter(cat => products.some(p => p.categoryId === cat.id)).map(cat => {
-                                            const count = products.filter(p => p.categoryId === cat.id).length;
+                                        {categories.filter(cat => categoryProductCounts.has(cat.id)).map(cat => {
+                                            const count = categoryProductCounts.get(cat.id) || 0;
                                             return (
                                                 <button
                                                     key={cat.id}
@@ -946,8 +981,8 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                                         >
                                             📦
                                         </button>
-                                        {categories.filter(cat => products.some(p => p.categoryId === cat.id)).map(cat => {
-                                            const count = products.filter(p => p.categoryId === cat.id).length;
+                                        {categories.filter(cat => categoryProductCounts.has(cat.id)).map(cat => {
+                                            const count = categoryProductCounts.get(cat.id) || 0;
                                             return (
                                                 <button
                                                     key={cat.id}
@@ -1039,8 +1074,8 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <Input
                                 placeholder="Search products..."
-                                value={filters.searchQuery}
-                                onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+                                value={searchInput}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 className="pl-9"
                             />
                         </div>
@@ -1186,7 +1221,7 @@ interface ProductCardProps {
     onToggleFavorite?: (productId: string) => void;
 }
 
-function ProductCard({ product, onAddToCart, isFavorite = false, onToggleFavorite }: ProductCardProps) {
+const ProductCard = memo(function ProductCard({ product, onAddToCart, isFavorite = false, onToggleFavorite }: ProductCardProps) {
     return (
         <div
             className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer group relative"
@@ -1251,7 +1286,7 @@ function ProductCard({ product, onAddToCart, isFavorite = false, onToggleFavorit
             </div>
         </div>
     );
-}
+});
 
 // Cart Item Row Component
 interface CartItemRowProps {
