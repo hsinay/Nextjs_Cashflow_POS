@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { ArrowLeft } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import Link from 'next/link';
@@ -20,6 +21,14 @@ interface POSHistoryPageProps {
     page?: string;
     limit?: string;
   };
+}
+
+function convertToNumber(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (value instanceof Prisma.Decimal) {
+    return value.toNumber();
+  }
+  return value;
 }
 
 function getDatabaseErrorMessage(error: unknown): string {
@@ -90,6 +99,17 @@ export default async function POSHistoryPage({ searchParams }: POSHistoryPagePro
       pages: Math.ceil(total / limit),
     };
 
+    const convertedSessions = sessions.map(s => ({
+      ...s,
+      openingCashAmount: convertToNumber(s.openingCashAmount),
+      closingCashAmount: convertToNumber(s.closingCashAmount),
+      totalSalesAmount: convertToNumber(s.totalSalesAmount),
+      totalCashReceived: convertToNumber(s.totalCashReceived),
+      totalCardReceived: convertToNumber(s.totalCardReceived),
+      totalDigitalReceived: convertToNumber(s.totalDigitalReceived),
+      cashVariance: convertToNumber(s.cashVariance),
+    }));
+
     return (
       <div className="space-y-6">
         <div>
@@ -112,7 +132,7 @@ export default async function POSHistoryPage({ searchParams }: POSHistoryPagePro
           </Card>
         ) : (
           <POSSessionHistoryClient
-            sessions={sessions}
+            sessions={convertedSessions}
             cashiers={cashiers}
             pagination={pagination}
             initialStatus={searchParams.status}

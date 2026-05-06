@@ -20,6 +20,22 @@ function convertToNumber(value: unknown): unknown {
   return value;
 }
 
+/**
+ * Recursively convert all Decimal fields in an object to numbers
+ */
+function convertDecimalFields(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (obj instanceof Prisma.Decimal) return obj.toNumber();
+  if (Array.isArray(obj)) return obj.map(convertDecimalFields);
+  if (typeof obj === 'object') {
+    return Object.keys(obj).reduce((acc, key) => {
+      acc[key] = convertDecimalFields(obj[key]);
+      return acc;
+    }, {} as any);
+  }
+  return obj;
+}
+
 function decimalToNumber(value: unknown): number {
   if (value instanceof Prisma.Decimal) return value.toNumber();
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -91,7 +107,9 @@ export async function getAllPurchaseOrders(filters: PurchaseOrderFilters): Promi
     orders: orders.map(o => ({
         ...o,
         totalAmount: convertToNumber(o.totalAmount),
+        paidAmount: convertToNumber(o.paidAmount),
         balanceAmount: convertToNumber(o.balanceAmount),
+        supplier: convertDecimalFields(o.supplier),
         items: o.items.map(i => ({
             ...i,
             unitPrice: convertToNumber(i.unitPrice),
@@ -127,7 +145,9 @@ export async function getPurchaseOrderById(id: string): Promise<PurchaseOrder | 
   return {
     ...order,
     totalAmount: convertToNumber(order.totalAmount),
+    paidAmount: convertToNumber(order.paidAmount),
     balanceAmount: convertToNumber(order.balanceAmount),
+    supplier: convertDecimalFields(order.supplier),
     items: order.items.map(i => ({
         ...i,
         unitPrice: convertToNumber(i.unitPrice),

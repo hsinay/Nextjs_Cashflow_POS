@@ -12,7 +12,6 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { PurchaseOrder } from '@/types/purchase-order.types';
-import { Supplier } from '@/types/supplier.types';
 import { Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useState, useTransition } from 'react';
@@ -21,7 +20,7 @@ interface PurchaseOrderListClientProps {
   initialSearch: string;
   initialSupplier: string;
   initialStatus: string;
-  suppliers: Supplier[];
+  suppliers: Array<{ id: string; name: string }>;
   orders: PurchaseOrder[];
   pagination: {
     page: number;

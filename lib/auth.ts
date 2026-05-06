@@ -39,7 +39,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) {
-          throw new Error('Username and password are required');
+          return null;
         }
 
         try {
@@ -62,12 +62,12 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user) {
-            throw new Error('Invalid credentials');
+            return null;
           }
 
           // @ts-ignore
           if (!user.isActive) {
-            throw new Error('Your account has been deactivated');
+            return null;
           }
 
           // Verify password
@@ -77,7 +77,7 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!passwordMatch) {
-            throw new Error('Invalid credentials');
+            return null;
           }
 
           // Update last login time
@@ -105,7 +105,8 @@ export const authOptions: NextAuthOptions = {
             permissions: [...new Set(permissions)], // Remove duplicates
           };
         } catch (error) {
-          throw error;
+          console.error('Auth error:', error);
+          return null;
         }
       },
     }),

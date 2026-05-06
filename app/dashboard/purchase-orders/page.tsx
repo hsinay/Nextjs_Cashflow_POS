@@ -36,13 +36,17 @@ export default async function PurchaseOrdersPage({ searchParams }: PurchaseOrder
   }
 
   const { orders, pagination } = await getAllPurchaseOrders(filters);
-  
-  // Fetch only dropdown data (id and name) - no balance calculations needed
-  const suppliers = await prisma.supplier.findMany({ 
-    where: { isActive: true }, 
-    select: { id: true, name: true },
+
+  // Fetch suppliers and strictly convert to plain objects with only id and name
+  const supplierRows = await prisma.supplier.findMany({
+    where: { isActive: true },
     orderBy: { name: 'asc' }
   });
+
+  const suppliers: Array<{ id: string; name: string }> = supplierRows.map(s => ({
+    id: String(s.id),
+    name: String(s.name)
+  }));
 
   return (
     <div className="space-y-8">
@@ -67,7 +71,7 @@ export default async function PurchaseOrdersPage({ searchParams }: PurchaseOrder
         initialSearch={searchParams.search || ''}
         initialSupplier={searchParams.supplier || ''}
         initialStatus={searchParams.status || ''}
-        suppliers={suppliers as any}
+        suppliers={suppliers}
         orders={orders}
         pagination={pagination}
       />

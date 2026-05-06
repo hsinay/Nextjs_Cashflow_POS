@@ -4,6 +4,7 @@ import { InventoryTransactionListClient } from '@/components/inventory/inventory
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getAllInventoryTransactions } from '@/services/inventory.service';
+import { Prisma } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
@@ -16,6 +17,14 @@ interface InventoryTransactionsPageProps {
     page?: string;
     limit?: string;
   };
+}
+
+function convertToNumber(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (value instanceof Prisma.Decimal) {
+    return value.toNumber();
+  }
+  return value;
 }
 
 export default async function InventoryTransactionsPage({ searchParams }: InventoryTransactionsPageProps) {
@@ -35,7 +44,14 @@ export default async function InventoryTransactionsPage({ searchParams }: Invent
   }
 
   const { transactions, pagination } = await getAllInventoryTransactions(filters);
-  const products = await prisma.product.findMany({ orderBy: { name: 'asc' }});
+  const rawProducts = await prisma.product.findMany({ orderBy: { name: 'asc' }});
+  const products = rawProducts.map(p => ({
+    ...p,
+    price: convertToNumber(p.price),
+    costPrice: convertToNumber(p.costPrice),
+    taxRate: convertToNumber(p.taxRate),
+    predictedDemandImpact: convertToNumber(p.predictedDemandImpact),
+  }));
 
   return (
     <div className="space-y-6">

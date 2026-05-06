@@ -22,13 +22,33 @@ function convertToNumber(value: unknown): unknown {
   return value;
 }
 
+/**
+ * Recursively convert all Decimal fields in an object to numbers
+ */
+function convertDecimalFields(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (obj instanceof Prisma.Decimal) return obj.toNumber();
+  if (Array.isArray(obj)) return obj.map(convertDecimalFields);
+  if (typeof obj === 'object') {
+    return Object.keys(obj).reduce((acc, key) => {
+      acc[key] = convertDecimalFields(obj[key]);
+      return acc;
+    }, {} as any);
+  }
+  return obj;
+}
+
 function convertPaymentToNumber(payment: any): Payment {
-  return {
+  const converted: any = {
     ...payment,
     amount: convertToNumber(payment.amount),
     transactionFee: convertToNumber(payment.transactionFee),
     netAmount: convertToNumber(payment.netAmount),
-  } as Payment;
+    customer: payment.customer ? convertDecimalFields(payment.customer) : null,
+    supplier: payment.supplier ? convertDecimalFields(payment.supplier) : null,
+  };
+
+  return converted as Payment;
 }
 
 function getSalesOrderPaymentState(
