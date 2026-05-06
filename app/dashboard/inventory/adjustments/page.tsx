@@ -3,11 +3,23 @@
 import { AdjustmentForm } from '@/components/inventory/adjustment-form';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
+function convertDecimals(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (obj instanceof Prisma.Decimal) return obj.toNumber();
+    if (Array.isArray(obj)) return obj.map(convertDecimals);
+    if (typeof obj === 'object') {
+        return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, convertDecimals(v)]));
+    }
+    return obj;
+}
+
 async function getProducts() {
-    return prisma.product.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
+    const products = await prisma.product.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
+    return convertDecimals(products);
 }
 
 export default async function InventoryAdjustmentsPage() {

@@ -120,6 +120,7 @@ export async function getAllSalesOrders(filters: SalesOrderFilters): Promise<Pag
             discount: convertToNumber(i.discount),
             taxAmount: convertToNumber(i.taxAmount),
             subtotal: convertToNumber(i.subtotal),
+            product: convertDecimalFields(i.product),
         }))
     })) as unknown as SalesOrder[],
     pagination: {
@@ -161,6 +162,7 @@ export async function getSalesOrderById(id: string): Promise<SalesOrder | null> 
         discount: convertToNumber(i.discount),
         taxAmount: convertToNumber(i.taxAmount),
         subtotal: convertToNumber(i.subtotal),
+        product: convertDecimalFields(i.product),
     }))
   } as unknown as SalesOrder;
 }

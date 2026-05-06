@@ -116,6 +116,7 @@ export async function getAllPurchaseOrders(filters: PurchaseOrderFilters): Promi
             discount: convertToNumber(i.discount),
             taxAmount: convertToNumber(i.taxAmount),
             subtotal: convertToNumber(i.subtotal),
+            product: convertDecimalFields(i.product),
         }))
     })) as unknown as PurchaseOrder[],
     pagination: {
@@ -154,6 +155,7 @@ export async function getPurchaseOrderById(id: string): Promise<PurchaseOrder | 
         discount: convertToNumber(i.discount),
         taxAmount: convertToNumber(i.taxAmount),
         subtotal: convertToNumber(i.subtotal),
+        product: convertDecimalFields(i.product),
     }))
   } as unknown as PurchaseOrder;
 }
