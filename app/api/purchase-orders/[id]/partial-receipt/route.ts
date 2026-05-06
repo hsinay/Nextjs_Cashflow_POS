@@ -24,7 +24,7 @@ const createPartialReceiptSchema = z.object({
   internalNotes: z.string().optional(),
 });
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -35,11 +35,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const endpoint = searchParams.get('endpoint');
 
     if (endpoint === 'schedule') {
-      const schedule = await getReceivingSchedule(params.id);
+      const schedule = await getReceivingSchedule((await params).id);
       return NextResponse.json({ success: true, data: schedule });
     }
 
-    const receipts = await getPartialReceiptsForPO(params.id);
+    const receipts = await getPartialReceiptsForPO((await params).id);
     return NextResponse.json({ success: true, data: receipts });
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const validated = createPartialReceiptSchema.parse(body);
 
     const receipt = await createPartialReceipt({
-      purchaseOrderId: params.id,
+      purchaseOrderId: (await params).id,
       receiptDate: new Date(validated.receiptDate),
       items: validated.items,
       supplierNotes: validated.supplierNotes,

@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const endDate = searchParams.get('endDate');
 
     const report = await reconcilePayments(
-      params.id,
+      (await params).id,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined
     );

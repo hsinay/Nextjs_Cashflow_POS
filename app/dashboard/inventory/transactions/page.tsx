@@ -9,14 +9,14 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
 interface InventoryTransactionsPageProps {
-  searchParams: {
+  searchParams: Promise<{
     productId?: string;
     transactionType?: string;
     startDate?: string;
     endDate?: string;
     page?: string;
     limit?: string;
-  };
+  }>;
 }
 
 function convertToNumber(value: unknown): unknown {
@@ -34,24 +34,25 @@ export default async function InventoryTransactionsPage({ searchParams }: Invent
     redirect('/login');
   }
 
+  const resolvedSearchParams = await searchParams;
   const filters = {
-    productId: searchParams.productId,
-    transactionType: searchParams.transactionType,
-    startDate: searchParams.startDate ? new Date(searchParams.startDate) : undefined,
-    endDate: searchParams.endDate ? new Date(searchParams.endDate) : undefined,
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit) : 20,
+    productId: resolvedSearchParams.productId,
+    transactionType: resolvedSearchParams.transactionType,
+    startDate: resolvedSearchParams.startDate ? new Date(resolvedSearchParams.startDate) : undefined,
+    endDate: resolvedSearchParams.endDate ? new Date(resolvedSearchParams.endDate) : undefined,
+    page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page) : 1,
+    limit: resolvedSearchParams.limit ? parseInt(resolvedSearchParams.limit) : 20,
   }
 
   const { transactions, pagination } = await getAllInventoryTransactions(filters);
   const rawProducts = await prisma.product.findMany({ orderBy: { name: 'asc' }});
   const products = rawProducts.map(p => ({
     ...p,
-    price: convertToNumber(p.price),
-    costPrice: convertToNumber(p.costPrice),
-    taxRate: convertToNumber(p.taxRate),
-    predictedDemandImpact: convertToNumber(p.predictedDemandImpact),
-  }));
+    price: convertToNumber(p.price) as any,
+    costPrice: convertToNumber(p.costPrice) as any,
+    taxRate: convertToNumber(p.taxRate) as any,
+    predictedDemandImpact: convertToNumber(p.predictedDemandImpact) as any,
+  })) as any[];
 
   return (
     <div className="space-y-6">
@@ -65,10 +66,10 @@ export default async function InventoryTransactionsPage({ searchParams }: Invent
       </div>
 
       <InventoryTransactionListClient
-        initialProductId={searchParams.productId || ''}
-        initialTransactionType={searchParams.transactionType || ''}
-        initialStartDate={searchParams.startDate || ''}
-        initialEndDate={searchParams.endDate || ''}
+        initialProductId={resolvedSearchParams.productId || ''}
+        initialTransactionType={resolvedSearchParams.transactionType || ''}
+        initialStartDate={resolvedSearchParams.startDate || ''}
+        initialEndDate={resolvedSearchParams.endDate || ''}
         products={products}
         transactions={transactions}
         pagination={pagination}

@@ -10,15 +10,15 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 interface ProductsPageProps {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     category?: string;
     page?: string;
     limit?: string;
-  };
+  }>;
 }
 
-async function getProducts(searchParams: ProductsPageProps['searchParams']) {
+async function getProducts(searchParams: Awaited<ProductsPageProps['searchParams']>) {
   try {
     const page = parseInt(searchParams.page || '1');
     const limit = parseInt(searchParams.limit || '10');
@@ -128,7 +128,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     redirect('/login');
   }
 
-  const { products, categories, pagination } = await getProducts(searchParams);
+  const resolvedSearchParams = await searchParams;
+  const { products, categories, pagination } = await getProducts(resolvedSearchParams);
 
   return (
     <div className="space-y-8">
@@ -150,8 +151,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
       {/* Search and Filters */}
       <ProductListClient
-        initialSearch={searchParams.search || ''}
-        initialCategory={searchParams.category || ''}
+        initialSearch={resolvedSearchParams.search || ''}
+        initialCategory={resolvedSearchParams.category || ''}
         categories={categories}
         products={products}
         pagination={pagination}

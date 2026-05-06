@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,12 +16,12 @@ export async function PUT(
 
     const body = await req.json();
     const { closingBalance, notes } = shiftCloseSchema.parse({
-      shiftId: params.id,
+      shiftId: (await params).id,
       closingBalance: body.closingBalance,
       notes: body.notes,
     });
 
-    const shift = await advancedPOSService.closeShift(params.id, closingBalance, notes);
+    const shift = await advancedPOSService.closeShift((await params).id, closingBalance, notes);
 
     return NextResponse.json({
       success: true,
@@ -37,7 +37,7 @@ export async function PUT(
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -45,7 +45,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const shift = { id: params.id, status: 'CLOSED', notes: '' };
+    const shift = { id: (await params).id, status: 'CLOSED', notes: '' };
 
     return NextResponse.json({
       success: true,

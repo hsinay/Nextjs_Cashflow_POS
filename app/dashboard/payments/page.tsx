@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 interface PaymentsPageProps {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     payerType?: string;
     payerId?: string;
@@ -21,7 +21,7 @@ interface PaymentsPageProps {
     endDate?: string;
     page?: string;
     limit?: string;
-  };
+  }>;
 }
 
 export default async function PaymentsPage({ searchParams }: PaymentsPageProps) {
@@ -31,15 +31,16 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
     redirect('/login');
   }
 
+  const resolvedSearchParams = await searchParams;
   const filters = {
-    search: searchParams.search,
-    payerType: searchParams.payerType as PayerType | undefined,
-    payerId: searchParams.payerId,
-    paymentMethod: searchParams.paymentMethod as ConcretePaymentMethod | undefined,
-    startDate: searchParams.startDate ? new Date(searchParams.startDate) : undefined,
-    endDate: searchParams.endDate ? new Date(searchParams.endDate) : undefined,
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit) : 20,
+    search: resolvedSearchParams.search,
+    payerType: resolvedSearchParams.payerType as PayerType | undefined,
+    payerId: resolvedSearchParams.payerId,
+    paymentMethod: resolvedSearchParams.paymentMethod as ConcretePaymentMethod | undefined,
+    startDate: resolvedSearchParams.startDate ? new Date(resolvedSearchParams.startDate) : undefined,
+    endDate: resolvedSearchParams.endDate ? new Date(resolvedSearchParams.endDate) : undefined,
+    page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page) : 1,
+    limit: resolvedSearchParams.limit ? parseInt(resolvedSearchParams.limit) : 20,
   }
 
   const { payments, pagination } = await getAllPayments(filters);
@@ -77,12 +78,12 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
       </div>
 
       <PaymentListClient
-        initialSearch={searchParams.search || ''}
-        initialPayerType={searchParams.payerType || ''}
-        initialPayerId={searchParams.payerId || ''}
-        initialPaymentMethod={searchParams.paymentMethod || ''}
-        initialStartDate={searchParams.startDate || ''}
-        initialEndDate={searchParams.endDate || ''}
+        initialSearch={resolvedSearchParams.search || ''}
+        initialPayerType={resolvedSearchParams.payerType || ''}
+        initialPayerId={resolvedSearchParams.payerId || ''}
+        initialPaymentMethod={resolvedSearchParams.paymentMethod || ''}
+        initialStartDate={resolvedSearchParams.startDate || ''}
+        initialEndDate={resolvedSearchParams.endDate || ''}
         customers={customers as any}
         suppliers={suppliers as any}
         payments={payments}

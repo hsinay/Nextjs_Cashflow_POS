@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
  */
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +19,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const category = await expenseCategoryService.getCategory(params.id);
+    const category = await expenseCategoryService.getCategory((await params).id);
 
     if (!category) {
       return NextResponse.json(
@@ -44,7 +44,7 @@ export async function GET(
  */
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -62,7 +62,7 @@ export async function PUT(
     const validated = await updateExpenseCategorySchema.parseAsync(body);
 
     const category = await expenseCategoryService.updateCategory(
-      params.id,
+      (await params).id,
       validated
     );
 
@@ -82,7 +82,7 @@ export async function PUT(
  */
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -96,7 +96,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const category = await expenseCategoryService.deleteCategory(params.id);
+    const category = await expenseCategoryService.deleteCategory((await params).id);
 
     return NextResponse.json({ success: true, data: category });
   } catch (error) {

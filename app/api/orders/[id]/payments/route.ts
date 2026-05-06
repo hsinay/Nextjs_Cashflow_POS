@@ -17,7 +17,7 @@ import { NextResponse } from 'next/server';
  */
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,8 +25,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payments = await getOrderPayments(params.id);
-    const summary = await getOrderPaymentSummary(params.id);
+    const payments = await getOrderPayments((await params).id);
+    const summary = await getOrderPaymentSummary((await params).id);
 
     return NextResponse.json({
       success: true,
@@ -47,7 +47,7 @@ export async function GET(
  */
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -60,7 +60,7 @@ export async function POST(
     // Validate input
     const validated = createOrderPaymentSchema.parse({
       ...body,
-      salesOrderId: params.id,
+      salesOrderId: (await params).id,
     });
 
     const payment = await createOrderPayment(validated);

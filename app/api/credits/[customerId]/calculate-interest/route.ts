@@ -11,7 +11,7 @@ import { creditService } from '@/services/credit.service';
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { customerId: string } }
+  { params }: { params: Promise<{ customerId: string }> }
 ) {
   try {
     // Auth check
@@ -25,7 +25,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { customerId } = params;
+    const { customerId } = await params;
 
     // Calculate and apply interest
     await creditService.calculateAndApplyInterest(customerId, session.user.id);

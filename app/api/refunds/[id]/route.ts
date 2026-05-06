@@ -6,7 +6,7 @@ import { refundApprovalSchema } from '@/lib/validations/advanced-pos.schema';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -22,13 +22,13 @@ export async function PUT(
 
     const body = await req.json();
     const { status, notes } = refundApprovalSchema.parse({
-      refundId: params.id,
+      refundId: (await params).id,
       status: body.status,
       notes: body.notes,
     });
 
     const refund = await advancedPOSService.updateRefundStatus(
-      params.id,
+      (await params).id,
       status,
       session.user.id!,
       notes

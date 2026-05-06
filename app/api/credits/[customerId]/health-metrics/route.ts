@@ -11,7 +11,7 @@ import { creditService } from '@/services/credit.service';
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { customerId: string } }
+  { params }: { params: Promise<{ customerId: string }> }
 ) {
   try {
     // Auth check
@@ -20,7 +20,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { customerId } = params;
+    const { customerId } = await params;
 
     // Get health metrics
     const metrics = await creditService.getHealthMetrics(customerId);

@@ -10,7 +10,7 @@ const acceptGRNSchema = z.object({
   acceptedBy: z.string().min(1),
 });
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const body = await req.json();
     acceptGRNSchema.parse(body);
 
-    await acceptGRN(params.id);
+    await acceptGRN((await params).id);
 
     return NextResponse.json({ success: true, message: 'GRN accepted' });
   } catch (error: unknown) {

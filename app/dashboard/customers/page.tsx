@@ -7,13 +7,14 @@ import { CustomerService } from '@/services/customer.service';
 import { CustomerSegment } from '@/types/customer.types';
 import Link from 'next/link';
 
-export default async function CustomersPage({ searchParams }: { searchParams?: Record<string, string> }) {
-  const page = Number(searchParams?.page || 1);
-  const limit = Number(searchParams?.limit || 20);
-  const search = searchParams?.search || '';
-  const segment = searchParams?.segment as CustomerSegment | undefined;
-  const highRisk = searchParams?.highRisk === 'true';
-  const creditIssues = searchParams?.creditIssues === 'true';
+export default async function CustomersPage({ searchParams }: { searchParams?: Promise<Record<string, string>> }) {
+  const resolvedParams: Record<string, string> = searchParams ? await searchParams : {};
+  const page = Number(resolvedParams?.page || 1);
+  const limit = Number(resolvedParams?.limit || 20);
+  const search = resolvedParams?.search || '';
+  const segment = resolvedParams?.segment as CustomerSegment | undefined;
+  const highRisk = resolvedParams?.highRisk === 'true';
+  const creditIssues = resolvedParams?.creditIssues === 'true';
 
   const { customers, pagination } = await CustomerService.getAllCustomers({
     search,

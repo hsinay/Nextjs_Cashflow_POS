@@ -7,9 +7,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string; // productId
-    };
+    }>;
 }
 
 /**
@@ -23,11 +23,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const history = await getInventoryHistoryForProduct(params.id);
+        const history = await getInventoryHistoryForProduct((await params).id);
 
         return NextResponse.json({ success: true, data: history }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/products/${params.id}/inventory-history error:`);
+        logger.error({ err: error }, `GET /api/products/${(await params).id}/inventory-history error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

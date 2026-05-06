@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server';
  */
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +19,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const posSession = await posSessionService.getSessionById(params.id);
+    const posSession = await posSessionService.getSessionById((await params).id);
 
     if (!posSession) {
       return NextResponse.json(
@@ -55,7 +55,7 @@ export async function GET(
  */
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -66,7 +66,7 @@ export async function PUT(
     const body = await req.json();
     const validated = closePOSSessionSchema.parse(body);
 
-    const posSession = await posSessionService.getSessionById(params.id);
+    const posSession = await posSessionService.getSessionById((await params).id);
 
     if (!posSession) {
       return NextResponse.json(
@@ -83,7 +83,7 @@ export async function PUT(
       );
     }
 
-    const closedSession = await posSessionService.closeSession(params.id, {
+    const closedSession = await posSessionService.closeSession((await params).id, {
       closingCashAmount: validated.closingCashAmount,
       notes: validated.notes,
     });

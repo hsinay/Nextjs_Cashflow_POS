@@ -11,13 +11,13 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 interface PurchaseOrdersPageProps {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     supplier?: string;
     status?: string;
     page?: string;
     limit?: string;
-  };
+  }>;
 }
 
 export default async function PurchaseOrdersPage({ searchParams }: PurchaseOrdersPageProps) {
@@ -27,12 +27,13 @@ export default async function PurchaseOrdersPage({ searchParams }: PurchaseOrder
     redirect('/login');
   }
 
+  const resolvedSearchParams = await searchParams;
   const filters = {
-    search: searchParams.search,
-    supplierId: searchParams.supplier,
-    status: searchParams.status,
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit) : 10,
+    search: resolvedSearchParams.search,
+    supplierId: resolvedSearchParams.supplier,
+    status: resolvedSearchParams.status,
+    page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page) : 1,
+    limit: resolvedSearchParams.limit ? parseInt(resolvedSearchParams.limit) : 10,
   }
 
   const { orders, pagination } = await getAllPurchaseOrders(filters);
@@ -68,9 +69,9 @@ export default async function PurchaseOrdersPage({ searchParams }: PurchaseOrder
 
       {/* Search and Filters */}
       <PurchaseOrderListClient
-        initialSearch={searchParams.search || ''}
-        initialSupplier={searchParams.supplier || ''}
-        initialStatus={searchParams.status || ''}
+        initialSearch={resolvedSearchParams.search || ''}
+        initialSupplier={resolvedSearchParams.supplier || ''}
+        initialStatus={resolvedSearchParams.status || ''}
         suppliers={suppliers}
         orders={orders}
         pagination={pagination}

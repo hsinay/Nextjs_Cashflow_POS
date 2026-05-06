@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
  */
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -30,7 +30,7 @@ export async function PUT(
     const body = await req.json();
     const validated = await updateDayBookEntrySchema.parseAsync(body);
 
-    const entry = await daybookService.updateEntry(params.id, validated);
+    const entry = await daybookService.updateEntry((await params).id, validated);
 
     return NextResponse.json({ success: true, data: entry });
   } catch (error) {
@@ -48,7 +48,7 @@ export async function PUT(
  */
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -62,7 +62,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const entry = await daybookService.deleteEntry(params.id);
+    const entry = await daybookService.deleteEntry((await params).id);
 
     return NextResponse.json({ success: true, data: entry });
   } catch (error) {

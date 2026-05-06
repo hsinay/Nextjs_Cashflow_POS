@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server';
  */
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const posSession = await posSessionService.getSessionById(params.id);
+    const posSession = await posSessionService.getSessionById((await params).id);
 
     if (!posSession) {
       return NextResponse.json(
@@ -35,7 +35,7 @@ export async function GET(
       );
     }
 
-    const summary = await posSessionService.getSessionSummary(params.id);
+    const summary = await posSessionService.getSessionSummary((await params).id);
 
     return NextResponse.json({
       success: true,

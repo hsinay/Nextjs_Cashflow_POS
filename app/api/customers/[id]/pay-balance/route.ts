@@ -11,10 +11,10 @@ const payBalanceSchema = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const customerId = params.id;
+    const customerId = (await params).id;
     const body = await req.json();
     const { amount, paymentMethod } = payBalanceSchema.parse(body);
 

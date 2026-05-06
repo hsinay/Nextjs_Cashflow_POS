@@ -12,9 +12,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string; // purchaseOrderId
-    };
+    }>;
 }
 
 /**
@@ -28,11 +28,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const payments = await getPurchaseOrderPayments(params.id);
+        const payments = await getPurchaseOrderPayments((await params).id);
 
         return NextResponse.json({ success: true, data: payments }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/purchase-orders/${params.id}/payments error:`);
+        logger.error({ err: error }, `GET /api/purchase-orders/${(await params).id}/payments error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const body = await request.json();
         const validated = linkPaymentToPOSchema.parse(body);
 
-        const updatedPO = await linkPaymentToPurchaseOrder(params.id, validated.paymentId);
+        const updatedPO = await linkPaymentToPurchaseOrder((await params).id, validated.paymentId);
 
         return NextResponse.json({ 
             success: true, 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             message: 'Payment linked successfully' 
         }, { status: 200 });
     } catch (error: any) {
-        logger.error({ err: error }, `POST /api/purchase-orders/${params.id}/payments error:`);
+        logger.error({ err: error }, `POST /api/purchase-orders/${(await params).id}/payments error:`);
         
         if (error.name === 'ZodError') {
             return NextResponse.json(
@@ -107,7 +107,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         const body = await request.json();
         const validated = unlinkPaymentFromPOSchema.parse(body);
 
-        const updatedPO = await unlinkPaymentFromPurchaseOrder(params.id, validated.paymentId);
+        const updatedPO = await unlinkPaymentFromPurchaseOrder((await params).id, validated.paymentId);
 
         return NextResponse.json({ 
             success: true, 
@@ -115,7 +115,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             message: 'Payment unlinked successfully' 
         }, { status: 200 });
     } catch (error: any) {
-        logger.error({ err: error }, `DELETE /api/purchase-orders/${params.id}/payments error:`);
+        logger.error({ err: error }, `DELETE /api/purchase-orders/${(await params).id}/payments error:`);
         
         if (error.name === 'ZodError') {
             return NextResponse.json(

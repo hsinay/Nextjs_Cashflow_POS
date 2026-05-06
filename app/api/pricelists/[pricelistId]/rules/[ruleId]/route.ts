@@ -7,10 +7,10 @@ import { updatePricelistRuleSchema } from '@/lib/validations/pricelist.schema';
 import { prisma } from '@/lib/prisma';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     pricelistId: string;
     ruleId: string;
-  };
+  }>;
 }
 
 /**
@@ -25,14 +25,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const rule = await prisma.pricelistRule.findUnique({
-      where: { id: params.ruleId },
+      where: { id: (await params).ruleId },
       include: {
         product: { select: { id: true, name: true, sku: true, price: true } },
         category: { select: { id: true, name: true } },
       },
     });
 
-    if (!rule || rule.pricelistId !== params.pricelistId) {
+    if (!rule || rule.pricelistId !== (await params).pricelistId) {
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
 
@@ -62,10 +62,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     // Verify rule belongs to pricelist
     const rule = await prisma.pricelistRule.findUnique({
-      where: { id: params.ruleId },
+      where: { id: (await params).ruleId },
     });
 
-    if (!rule || rule.pricelistId !== params.pricelistId) {
+    if (!rule || rule.pricelistId !== (await params).pricelistId) {
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
 
@@ -91,7 +91,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     // Update rule
     const updatedRule = await prisma.pricelistRule.update({
-      where: { id: params.ruleId },
+      where: { id: (await params).ruleId },
       data: updateData,
       include: {
         product: { select: { id: true, name: true, sku: true, price: true } },
@@ -135,16 +135,16 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
     // Verify rule belongs to pricelist
     const rule = await prisma.pricelistRule.findUnique({
-      where: { id: params.ruleId },
+      where: { id: (await params).ruleId },
     });
 
-    if (!rule || rule.pricelistId !== params.pricelistId) {
+    if (!rule || rule.pricelistId !== (await params).pricelistId) {
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
 
     // Delete rule
     await prisma.pricelistRule.delete({
-      where: { id: params.ruleId },
+      where: { id: (await params).ruleId },
     });
 
     return NextResponse.json({

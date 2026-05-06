@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const customerId = params.id;
+    const customerId = (await params).id;
     const customer = await CustomerService.getCustomerById(customerId);
 
     if (!customer) {

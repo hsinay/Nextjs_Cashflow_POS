@@ -7,9 +7,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 /**
@@ -23,14 +23,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const ledgerEntry = await getLedgerEntryById(params.id);
+        const ledgerEntry = await getLedgerEntryById((await params).id);
         if (!ledgerEntry) {
             return NextResponse.json({ success: false, error: 'Ledger entry not found' }, { status: 404 });
         }
 
         return NextResponse.json({ success: true, data: ledgerEntry }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/ledger/${params.id} error:`);
+        logger.error({ err: error }, `GET /api/ledger/${(await params).id} error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

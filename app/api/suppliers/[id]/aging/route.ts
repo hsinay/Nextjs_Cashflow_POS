@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const aging = await calculateSupplierAging(params.id);
+    const aging = await calculateSupplierAging((await params).id);
 
     return NextResponse.json({ success: true, data: aging }, { status: 200 });
   } catch (error: any) {

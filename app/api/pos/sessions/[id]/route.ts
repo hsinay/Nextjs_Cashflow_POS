@@ -12,9 +12,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 /**
@@ -28,14 +28,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const posSession = await getPOSSessionById(params.id);
+        const posSession = await getPOSSessionById((await params).id);
         if (!posSession) {
             return NextResponse.json({ success: false, error: 'POS Session not found' }, { status: 404 });
         }
 
         return NextResponse.json({ success: true, data: posSession }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/pos/sessions/${params.id} error:`);
+        logger.error({ err: error }, `GET /api/pos/sessions/${(await params).id} error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         const data = validationResult.data;
-        const closedSession = await closePOSSession(params.id, data);
+        const closedSession = await closePOSSession((await params).id, data);
 
         return NextResponse.json(
             {
@@ -81,7 +81,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             { status: 200 }
         );
     } catch (error: any) {
-        logger.error({ err: error }, `PUT /api/pos/sessions/${params.id} error:`);
+        logger.error({ err: error }, `PUT /api/pos/sessions/${(await params).id} error:`);
         if (error.message?.includes('not found') || error.message?.includes('already closed')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

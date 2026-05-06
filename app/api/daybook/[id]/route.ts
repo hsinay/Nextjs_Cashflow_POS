@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
  */
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +19,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const daybook = await daybookService.getDayBook(params.id);
+    const daybook = await daybookService.getDayBook((await params).id);
 
     if (!daybook) {
       return NextResponse.json({ error: "Day book not found" }, { status: 404 });
@@ -41,7 +41,7 @@ export async function GET(
  */
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -61,7 +61,7 @@ export async function PUT(
     if (action === "close") {
       const validated = await closeDayBookSchema.parseAsync(data);
       const daybook = await daybookService.closeDayBook(
-        params.id,
+        (await params).id,
         validated,
         session.user.id
       );
@@ -71,7 +71,7 @@ export async function PUT(
     if (action === "approve") {
       const validated = await approveDayBookSchema.parseAsync(data);
       const daybook = await daybookService.approveDayBook(
-        params.id,
+        (await params).id,
         validated,
         session.user.id
       );

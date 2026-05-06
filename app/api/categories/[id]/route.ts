@@ -14,10 +14,10 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string}> }
 ): Promise<NextResponse<APIResponse<unknown>>> {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Validate UUID format
     if (!id || id.length === 0) {
@@ -70,10 +70,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string}> }
 ): Promise<NextResponse<APIResponse<any>>> {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Check authentication
     const session = await getServerSession(authOptions);
@@ -201,10 +201,10 @@ export async function PUT(
  */
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string}> }
 ): Promise<NextResponse<APIResponse<unknown>>> {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Check authentication
     const session = await getServerSession(authOptions);

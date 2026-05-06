@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
  */
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -22,7 +22,7 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
 
-    const entries = await daybookService.getEntries(params.id, {
+    const entries = await daybookService.getEntries((await params).id, {
       type: type || undefined,
     });
 
@@ -42,7 +42,7 @@ export async function GET(
  */
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -60,7 +60,7 @@ export async function POST(
 
     const body = await req.json();
     const validated = await createDayBookEntrySchema.parseAsync({
-      dayBookId: params.id,
+      dayBookId: (await params).id,
       ...body,
     });
 

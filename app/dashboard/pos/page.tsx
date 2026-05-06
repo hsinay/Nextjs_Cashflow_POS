@@ -54,7 +54,7 @@ export default async function POSPage() {
     outstandingBalance: convertToNumber(c.outstandingBalance),
     loyaltyPoints: convertToNumber(c.loyaltyPoints),
     churnRiskScore: convertToNumber(c.churnRiskScore),
-  }));
+  })) as any[];
 
   return (
     <div className="h-full">

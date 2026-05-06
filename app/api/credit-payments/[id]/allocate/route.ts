@@ -25,7 +25,7 @@ const allocatePaymentSchema = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string}> }
 ) {
   try {
     // Auth check
@@ -42,7 +42,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Validate input
     const body = await req.json();

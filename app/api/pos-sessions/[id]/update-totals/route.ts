@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server';
  */
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -22,7 +22,7 @@ export async function POST(
     const body = await req.json();
     const validated = updateSessionTotalsSchema.parse(body);
 
-    const posSession = await posSessionService.getSessionById(params.id);
+    const posSession = await posSessionService.getSessionById((await params).id);
 
     if (!posSession) {
       return NextResponse.json(
@@ -49,7 +49,7 @@ export async function POST(
 
     // Update totals
     await posSessionService.updateSessionTotals(
-      params.id,
+      (await params).id,
       validated.paymentMethod,
       validated.amount
     );

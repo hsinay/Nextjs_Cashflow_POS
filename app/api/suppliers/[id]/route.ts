@@ -11,10 +11,10 @@ import { NextRequest, NextResponse } from 'next/server';
  * Authentication required
  */
 export async function GET(
-  _request: NextRequest, { params }: { params: { id: string } }) {
+  _request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAuth();
-    const supplier = await SupplierService.getSupplierById(params.id);
+    const supplier = await SupplierService.getSupplierById((await params).id);
     
     if (!supplier) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
@@ -31,14 +31,14 @@ export async function GET(
  * Update supplier
  * Requires ADMIN or PURCHASE_MANAGER role
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAuth();
     await requireRole(['ADMIN', 'PURCHASE_MANAGER']);
     
     const body = await request.json();
     const data = updateSupplierSchema.parse(body);
-    const supplier = await SupplierService.updateSupplier(params.id, data);
+    const supplier = await SupplierService.updateSupplier((await params).id, data);
     
     return NextResponse.json({ success: true, data: supplier }, { status: 200 });
   } catch (error: any) {
@@ -58,12 +58,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
  * Requires ADMIN role
  */
 export async function DELETE(
-  _request: NextRequest, { params }: { params: { id: string } }) {
+  _request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAuth();
     await requireRole(['ADMIN']);
     
-    await SupplierService.deleteSupplier(params.id);
+    await SupplierService.deleteSupplier((await params).id);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {
     if (error.code === 'HAS_ORDERS') {

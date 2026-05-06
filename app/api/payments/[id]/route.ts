@@ -9,9 +9,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 /**
@@ -25,14 +25,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const payment = await getPaymentById(params.id);
+        const payment = await getPaymentById((await params).id);
         if (!payment) {
             return NextResponse.json({ success: false, error: 'Payment not found' }, { status: 404 });
         }
 
         return NextResponse.json({ success: true, data: payment }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/payments/${params.id} error:`);
+        logger.error({ err: error }, `GET /api/payments/${(await params).id} error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -66,14 +66,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             );
         }
 
-        const payment = await updatePayment(params.id, validationResult.data);
+        const payment = await updatePayment((await params).id, validationResult.data);
 
         return NextResponse.json(
             { success: true, message: 'Payment updated successfully', data: payment },
             { status: 200 }
         );
     } catch (error: any) {
-        logger.error({ err: error }, `PUT /api/payments/${params.id} error:`);
+        logger.error({ err: error }, `PUT /api/payments/${(await params).id} error:`);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }
@@ -104,11 +104,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
         }
 
-        await deletePayment(params.id);
+        await deletePayment((await params).id);
 
         return NextResponse.json({ success: true, message: 'Payment deleted successfully' }, { status: 200 });
     } catch (error: any) {
-        logger.error({ err: error }, `DELETE /api/payments/${params.id} error:`);
+        logger.error({ err: error }, `DELETE /api/payments/${(await params).id} error:`);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

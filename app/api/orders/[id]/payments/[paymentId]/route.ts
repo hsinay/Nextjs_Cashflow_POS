@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server';
  */
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string; paymentId: string } }
+  { params }: { params: Promise<{ id: string; paymentId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -26,7 +26,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await deleteOrderPayment(params.paymentId);
+    await deleteOrderPayment((await params).paymentId);
 
     return NextResponse.json({
       success: true,

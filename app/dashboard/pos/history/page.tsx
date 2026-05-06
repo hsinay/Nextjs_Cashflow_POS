@@ -13,14 +13,14 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 interface POSHistoryPageProps {
-  searchParams: {
+  searchParams: Promise<{
     status?: string;
     cashierId?: string;
     startDate?: string;
     endDate?: string;
     page?: string;
     limit?: string;
-  };
+  }>;
 }
 
 function convertToNumber(value: unknown): unknown {
@@ -44,12 +44,14 @@ function getDatabaseErrorMessage(error: unknown): string {
   return 'Unable to load POS session history right now.';
 }
 
-export default async function POSHistoryPage({ searchParams }: POSHistoryPageProps) {
+export default async function POSHistoryPage({ searchParams: searchParamsPromise }: POSHistoryPageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     redirect('/login');
   }
+
+  const searchParams = await searchParamsPromise;
 
   // Fetch sessions with filters
   const whereClause: any = {};
@@ -108,7 +110,7 @@ export default async function POSHistoryPage({ searchParams }: POSHistoryPagePro
       totalCardReceived: convertToNumber(s.totalCardReceived),
       totalDigitalReceived: convertToNumber(s.totalDigitalReceived),
       cashVariance: convertToNumber(s.cashVariance),
-    }));
+    })) as any[];
 
     return (
       <div className="space-y-6">

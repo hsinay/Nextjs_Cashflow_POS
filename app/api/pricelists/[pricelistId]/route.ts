@@ -14,9 +14,9 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     pricelistId: string;
-  };
+  }>;
 }
 
 /**
@@ -36,7 +36,7 @@ export async function GET(
       );
     }
 
-    const pricelist = await getPricelistById(params.pricelistId);
+    const pricelist = await getPricelistById((await params).pricelistId);
     if (!pricelist) {
       return NextResponse.json(
         { error: 'Pricelist not found' },
@@ -90,13 +90,13 @@ export async function PUT(
     const validatedData = await updatePricelistSchema.parseAsync(pricelistData);
 
     // Update pricelist
-    const pricelist = await updatePricelist(params.pricelistId, validatedData);
+    const pricelist = await updatePricelist((await params).pricelistId, validatedData);
 
     // Handle rules separately if provided
     if (rules && Array.isArray(rules)) {
       // Get existing rules for this pricelist
       const existingRules = await prisma.pricelistRule.findMany({
-        where: { pricelistId: params.pricelistId },
+        where: { pricelistId: (await params).pricelistId },
       });
       const existingRuleIds = new Set(existingRules.map((r) => r.id));
 
@@ -121,7 +121,7 @@ export async function PUT(
 
         if (!rule.id || rule.id.startsWith('rule-')) {
           // New rule - create it
-          await createPricelistRule(params.pricelistId, validatedRule);
+          await createPricelistRule((await params).pricelistId, validatedRule);
         } else {
           // Existing rule - update it
           await prisma.pricelistRule.update({
@@ -193,7 +193,7 @@ export async function DELETE(
 ) {
   try {
     // Validate UUID format
-    if (!isValidUUID(params.pricelistId)) {
+    if (!isValidUUID((await params).pricelistId)) {
       const error = createInvalidIDError('pricelistId');
       return NextResponse.json(
         { error: error.message },
@@ -217,7 +217,7 @@ export async function DELETE(
       );
     }
 
-    await deletePricelist(params.pricelistId);
+    await deletePricelist((await params).pricelistId);
 
     return NextResponse.json({
       success: true,

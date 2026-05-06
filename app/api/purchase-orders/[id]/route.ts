@@ -13,9 +13,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 /**
@@ -29,14 +29,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const order = await getPurchaseOrderById(params.id);
+        const order = await getPurchaseOrderById((await params).id);
         if (!order) {
             return NextResponse.json({ success: false, error: 'Purchase order not found' }, { status: 404 });
         }
 
         return NextResponse.json({ success: true, data: order }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/purchase-orders/${params.id} error:`);
+        logger.error({ err: error }, `GET /api/purchase-orders/${(await params).id} error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -71,12 +71,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         const data = validationResult.data;
-        const updatedOrder = await updatePurchaseOrder(params.id, data);
+        const updatedOrder = await updatePurchaseOrder((await params).id, data);
         
         return NextResponse.json({ success: true, data: updatedOrder }, { status: 200 });
 
     } catch (error: any) {
-        logger.error({ err: error }, `PUT /api/purchase-orders/${params.id} error:`);
+        logger.error({ err: error }, `PUT /api/purchase-orders/${(await params).id} error:`);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }
@@ -100,11 +100,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
         }
 
-        await deletePurchaseOrder(params.id);
+        await deletePurchaseOrder((await params).id);
 
         return NextResponse.json({ success: true, message: 'Purchase order deleted successfully' }, { status: 200 });
     } catch (error: any) {
-        logger.error({ err: error }, `DELETE /api/purchase-orders/${params.id} error:`);
+        logger.error({ err: error }, `DELETE /api/purchase-orders/${(await params).id} error:`);
         if (error.message?.includes('not found')) {
             return NextResponse.json({ success: false, error: error.message }, { status: 404 });
         }

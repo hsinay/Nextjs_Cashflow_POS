@@ -7,9 +7,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string; // sessionId
-    };
+    }>;
 }
 
 /**
@@ -23,11 +23,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const transactions = await getTransactionsBySessionId(params.id);
+        const transactions = await getTransactionsBySessionId((await params).id);
 
         return NextResponse.json({ success: true, data: transactions }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/pos/sessions/${params.id}/transactions error:`);
+        logger.error({ err: error }, `GET /api/pos/sessions/${(await params).id}/transactions error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

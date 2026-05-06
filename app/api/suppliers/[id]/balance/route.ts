@@ -10,10 +10,10 @@ import { NextRequest, NextResponse } from 'next/server';
  * Authentication required
  */
 export async function GET(
-  _request: NextRequest, { params }: { params: { id: string } }) {
+  _request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAuth();
-    const balance = await SupplierService.getSupplierBalance(params.id);
+    const balance = await SupplierService.getSupplierBalance((await params).id);
     
     if (!balance) {
       return NextResponse.json({ success: false, error: 'Supplier not found' }, { status: 404 });

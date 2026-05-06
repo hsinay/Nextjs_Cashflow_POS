@@ -11,12 +11,12 @@ import { NextRequest, NextResponse } from 'next/server';
  * Authentication required
  */
 export async function GET(
-  _request: NextRequest, { params }: { params: { id: string } }) {
+  _request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAuth();
     const { status, page = '1', limit = '20' } = Object.fromEntries(_request.nextUrl.searchParams.entries());
     
-    const result = await SupplierService.getSupplierOrders(params.id, {
+    const result = await SupplierService.getSupplierOrders((await params).id, {
       status,
       page: Number(page),
       limit: Number(limit),

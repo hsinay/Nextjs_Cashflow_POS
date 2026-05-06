@@ -11,13 +11,13 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 interface SalesOrdersPageProps {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     customer?: string;
     status?: string;
     page?: string;
     limit?: string;
-  };
+  }>;
 }
 
 export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageProps) {
@@ -27,12 +27,13 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
     redirect('/login');
   }
 
+  const resolvedSearchParams = await searchParams;
   const filters = {
-    search: searchParams.search,
-    customerId: searchParams.customer,
-    status: searchParams.status,
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit) : 10,
+    search: resolvedSearchParams.search,
+    customerId: resolvedSearchParams.customer,
+    status: resolvedSearchParams.status,
+    page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page) : 1,
+    limit: resolvedSearchParams.limit ? parseInt(resolvedSearchParams.limit) : 10,
   }
 
   const { orders, pagination } = await getAllSalesOrders(filters);
@@ -64,9 +65,9 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
 
       {/* Search and Filters */}
       <SalesOrderListClient
-        initialSearch={searchParams.search || ''}
-        initialCustomer={searchParams.customer || ''}
-        initialStatus={searchParams.status || ''}
+        initialSearch={resolvedSearchParams.search || ''}
+        initialCustomer={resolvedSearchParams.customer || ''}
+        initialStatus={resolvedSearchParams.status || ''}
         customers={customers as any}
         orders={orders}
         pagination={pagination}

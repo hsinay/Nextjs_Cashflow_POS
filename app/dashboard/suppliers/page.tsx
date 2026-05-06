@@ -7,11 +7,12 @@ import { SupplierService } from '@/services/supplier.service';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 
-export default async function SuppliersPage({ searchParams }: { searchParams?: Record<string, string> }) {
-  const page = Number(searchParams?.page || 1);
-  const limit = Number(searchParams?.limit || 20);
-  const search = searchParams?.search || '';
-  const creditIssues = searchParams?.creditIssues === 'true';
+export default async function SuppliersPage({ searchParams }: { searchParams?: Promise<Record<string, string>> }) {
+  const resolvedParams: Record<string, string> = searchParams ? await searchParams : {};
+  const page = Number(resolvedParams?.page || 1);
+  const limit = Number(resolvedParams?.limit || 20);
+  const search = resolvedParams?.search || '';
+  const creditIssues = resolvedParams?.creditIssues === 'true';
 
   const { suppliers, pagination } = await SupplierService.getAllSuppliers({
     search,

@@ -24,7 +24,7 @@ const createGRNSchema = z.object({
   inspectionNotes: z.string().optional(),
 });
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -35,11 +35,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const endpoint = searchParams.get('endpoint');
 
     if (endpoint === 'status') {
-      const status = await getPOReceivingStatus(params.id);
+      const status = await getPOReceivingStatus((await params).id);
       return NextResponse.json({ success: true, data: status });
     }
 
-    const grns = await getGRNsForPO(params.id);
+    const grns = await getGRNsForPO((await params).id);
     return NextResponse.json({ success: true, data: grns });
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const validated = createGRNSchema.parse(body);
 
     const grn = await createGRN({
-      purchaseOrderId: params.id,
+      purchaseOrderId: (await params).id,
       grnDate: new Date(validated.grnDate),
       items: validated.items.map((item) => ({
         purchaseOrderItemId: item.purchaseOrderItemId,

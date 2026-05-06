@@ -7,9 +7,9 @@ import { createPricelistRuleSchema } from '@/lib/validations/pricelist.schema';
 import { prisma } from '@/lib/prisma';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     pricelistId: string;
-  };
+  }>;
 }
 
 /**
@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Verify pricelist exists
     const pricelist = await prisma.pricelist.findUnique({
-      where: { id: params.pricelistId },
+      where: { id: (await params).pricelistId },
     });
 
     if (!pricelist) {
@@ -46,7 +46,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const validated = await createPricelistRuleSchema.parseAsync(body);
 
     // Create rule
-    const rule = await createPricelistRule(params.pricelistId, validated);
+    const rule = await createPricelistRule((await params).pricelistId, validated);
 
     return NextResponse.json(
       { success: true, data: rule },

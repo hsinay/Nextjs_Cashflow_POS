@@ -12,7 +12,7 @@ const reconcileSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -24,7 +24,7 @@ export async function POST(
     const validated = reconcileSchema.parse(body);
 
     const reconciled = await posReconciliationService.markReconciled(
-      params.id,
+      (await params).id,
       session.user.id || '',
       validated.notes
     );
@@ -47,7 +47,7 @@ export async function POST(
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -55,7 +55,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const reconciliation = await posReconciliationService.calculateReconciliation(params.id);
+    const reconciliation = await posReconciliationService.calculateReconciliation((await params).id);
 
     return NextResponse.json(
       { success: true, data: reconciliation },

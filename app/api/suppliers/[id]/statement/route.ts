@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const statement = await generateSupplierStatement(params.id, startDate, endDate);
+    const statement = await generateSupplierStatement((await params).id, startDate, endDate);
 
     return NextResponse.json({ success: true, data: statement }, { status: 200 });
   } catch (error: unknown) {

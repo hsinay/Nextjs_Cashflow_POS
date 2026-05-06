@@ -7,9 +7,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string; // transactionId
-    };
+    }>;
 }
 
 /**
@@ -24,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const transaction = await getTransactionById(params.id);
+        const transaction = await getTransactionById((await params).id);
         if (!transaction) {
             return NextResponse.json({ success: false, error: 'Transaction not found' }, { status: 404 });
         }
@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         // For now, we return the transaction data directly.
         return NextResponse.json({ success: true, data: transaction, message: "Simulated receipt data" }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/pos/transactions/${params.id}/receipt error:`);
+        logger.error({ err: error }, `GET /api/pos/transactions/${(await params).id}/receipt error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

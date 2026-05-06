@@ -7,9 +7,9 @@ import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string; // salesOrderId
-    };
+    }>;
 }
 
 /**
@@ -23,11 +23,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const payments = await getAllPayments({ referenceOrderId: params.id });
+        const payments = await getAllPayments({ referenceOrderId: (await params).id });
 
         return NextResponse.json({ success: true, data: payments.payments }, { status: 200 });
     } catch (error) {
-        logger.error({ err: error }, `GET /api/sales-orders/${params.id}/payments error:`);
+        logger.error({ err: error }, `GET /api/sales-orders/${(await params).id}/payments error:`);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

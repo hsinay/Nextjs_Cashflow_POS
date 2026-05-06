@@ -11,7 +11,7 @@ import { reconcileDayBookSchema } from "@/lib/validations/daybook.schema";
  */
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,22 +25,23 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     const validated = await reconcileDayBookSchema.parseAsync(body);
 
     // Record denominations with dayBookId
     const denominationsWithId = validated.denominations.map((d: any) => ({
       ...d,
-      dayBookId: params.id,
+      dayBookId: id,
     }));
 
     const { created, totalCash } = await daybookService.recordDenominations(
-      params.id,
+      id,
       denominationsWithId
     );
 
     // Get reconciliation summary
-    const summary = await daybookService.getReconciliationSummary(params.id);
+    const summary = await daybookService.getReconciliationSummary(id);
 
     return NextResponse.json(
       {
@@ -68,7 +69,7 @@ export async function POST(
  */
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -76,7 +77,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const summary = await daybookService.getReconciliationSummary(params.id);
+    const { id } = await params;
+    const summary = await daybookService.getReconciliationSummary(id);
 
     return NextResponse.json({ success: true, data: summary });
   } catch (error) {
