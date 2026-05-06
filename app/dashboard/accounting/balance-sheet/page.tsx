@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ interface BalanceSheetReport {
   [key: string]: any;
 }
 
-export default function BalanceSheetPage() {
+function BalanceSheetContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [date, setDate] = useState('');
@@ -46,12 +47,7 @@ export default function BalanceSheetPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Balance Sheet</h1>
-        <p className="text-gray-600 mt-1">A snapshot of your company's assets, liabilities, and equity at a specific point in time.</p>
-      </div>
-
+    <>
       <Card>
         <CardHeader>
           <CardTitle>Report Filters</CardTitle>
@@ -88,6 +84,21 @@ export default function BalanceSheetPage() {
           )}
         </CardContent>
       </Card>
+    </>
+  );
+}
+
+export default function BalanceSheetPage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Balance Sheet</h1>
+        <p className="text-gray-600 mt-1">A snapshot of your company's assets, liabilities, and equity at a specific point in time.</p>
+      </div>
+
+      <Suspense fallback={<p className="text-gray-600">Loading...</p>}>
+        <BalanceSheetContent />
+      </Suspense>
     </div>
   );
 }

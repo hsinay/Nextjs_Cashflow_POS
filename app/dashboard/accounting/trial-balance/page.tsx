@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ interface TrialBalanceReport {
   [key: string]: any;
 }
 
-export default function TrialBalancePage() {
+function TrialBalanceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [startDate, setStartDate] = useState('');
@@ -51,12 +52,7 @@ export default function TrialBalancePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Trial Balance</h1>
-        <p className="text-gray-600 mt-1">A summary of all debits and credits in the ledger.</p>
-      </div>
-
+    <>
       <Card>
         <CardHeader>
           <CardTitle>Report Filters</CardTitle>
@@ -103,6 +99,21 @@ export default function TrialBalancePage() {
           )}
         </CardContent>
       </Card>
+    </>
+  );
+}
+
+export default function TrialBalancePage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Trial Balance</h1>
+        <p className="text-gray-600 mt-1">A summary of all debits and credits in the ledger.</p>
+      </div>
+
+      <Suspense fallback={<p className="text-gray-600">Loading...</p>}>
+        <TrialBalanceContent />
+      </Suspense>
     </div>
   );
 }
