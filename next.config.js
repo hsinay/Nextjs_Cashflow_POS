@@ -25,6 +25,7 @@ const nextConfig = {
   images: {
     remotePatterns,
   },
+  serverExternalPackages: ['pino', 'pino-pretty'],
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',

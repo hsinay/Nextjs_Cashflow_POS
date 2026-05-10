@@ -36,6 +36,8 @@ export interface SupplierFilters {
   isActive?: boolean;
   page?: number;
   limit?: number;
+  sortField?: string;
+  sortDir?: 'asc' | 'desc';
 }
 
 export interface CreditStatus {

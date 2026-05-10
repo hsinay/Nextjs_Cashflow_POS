@@ -1,6 +1,7 @@
 // services/ledger.service.ts
 
 import { prisma } from '@/lib/prisma';
+import { buildOrderBy } from '@/lib/build-order-by';
 import {
     CreateLedgerEntryInput,
     LedgerEntry,
@@ -41,7 +42,7 @@ export async function createLedgerEntry(data: CreateLedgerEntryInput, txClient?:
 }
 
 export async function getAllLedgerEntries(filters: LedgerFilters): Promise<PaginatedLedgerEntries> {
-    const { startDate, endDate, account, referenceId, page = 1, limit = 20 } = filters;
+    const { startDate, endDate, account, referenceId, page = 1, limit = 20, sortField, sortDir } = filters;
     const skip = (page - 1) * limit;
 
     const where: Prisma.LedgerEntryWhereInput = {};
@@ -65,7 +66,7 @@ export async function getAllLedgerEntries(filters: LedgerFilters): Promise<Pagin
         where,
         skip,
         take: limit,
-        orderBy: { entryDate: 'desc' },
+        orderBy: buildOrderBy(sortField, sortDir, { entryDate: 'desc' }),
     });
 
     const total = await prisma.ledgerEntry.count({ where });

@@ -1,6 +1,7 @@
 // services/inventory.service.ts
 
 import { prisma } from '@/lib/prisma';
+import { buildOrderBy } from '@/lib/build-order-by';
 import { CreateInventoryTransactionInput, InventoryTransaction } from '@/types/inventory.types';
 import { Prisma } from '@prisma/client';
 
@@ -12,11 +13,17 @@ function convertToNumber(value: unknown): unknown {
   return value;
 }
 
-export async function createInventoryTransaction(data: CreateInventoryTransactionInput): Promise<InventoryTransaction> {
+type PrismaClient = typeof prisma;
+type TxClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>;
+
+export async function createInventoryTransaction(
+    data: CreateInventoryTransactionInput,
+    tx?: TxClient
+): Promise<InventoryTransaction> {
+    const client = tx ?? prisma;
     const { productId, transactionType, quantity, referenceId, notes } = data;
 
-    // Create transaction record
-    const transaction = await prisma.inventoryTransaction.create({
+    const transaction = await client.inventoryTransaction.create({
         data: {
             product: { connect: { id: productId } },
             type: transactionType,
@@ -29,34 +36,15 @@ export async function createInventoryTransaction(data: CreateInventoryTransactio
         },
     });
 
-    // Update product stock quantity based on transaction type
-    if (transactionType === 'PURCHASE') {
-        // Add to stock for purchase orders
-        await prisma.product.update({
+    if (transactionType === 'PURCHASE' || transactionType === 'RETURN') {
+        await client.product.update({
             where: { id: productId },
-            data: {
-                stockQuantity: {
-                    increment: quantity,
-                },
-            },
+            data: { stockQuantity: { increment: quantity } },
         });
     } else if (transactionType === 'SALE' || transactionType === 'POS_SALE') {
-        await prisma.product.update({
+        await client.product.update({
             where: { id: productId },
-            data: {
-                stockQuantity: {
-                    decrement: quantity,
-                },
-            },
-        });
-    } else if (transactionType === 'RETURN') {
-        await prisma.product.update({
-            where: { id: productId },
-            data: {
-                stockQuantity: {
-                    increment: quantity,
-                },
-            },
+            data: { stockQuantity: { decrement: quantity } },
         });
     }
 
@@ -88,7 +76,7 @@ export async function getInventoryHistoryForProduct(productId: string): Promise<
 }
 
 export async function getAllInventoryTransactions(filters: any): Promise<any> {
-    const { productId, transactionType, startDate, endDate, page = 1, limit = 20 } = filters;
+    const { productId, transactionType, startDate, endDate, page = 1, limit = 20, sortField, sortDir } = filters;
     const skip = (page - 1) * limit;
 
     const where: Prisma.InventoryTransactionWhereInput = {};
@@ -113,7 +101,7 @@ export async function getAllInventoryTransactions(filters: any): Promise<any> {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: buildOrderBy(sortField, sortDir, { createdAt: 'desc' }),
         include: { product: true },
     });
 

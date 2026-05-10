@@ -1,5 +1,6 @@
-// components/customers/customer-table.tsx
+'use client';
 
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -10,6 +11,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/currency';
+import { useUrlSort } from '@/lib/use-url-sort';
 import { Customer } from '@/types/customer.types';
 import Link from 'next/link';
 import { CreditStatusBadge } from './credit-status-badge';
@@ -22,19 +24,21 @@ interface CustomerTableProps {
 }
 
 export function CustomerTable({ customers, pagination: _pagination }: CustomerTableProps) {
+  const { sortField, sortDir, handleSort } = useUrlSort();
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-slate-50 border-b border-slate-200">
-            <TableHead className="text-slate-900 font-semibold">Name</TableHead>
-            <TableHead className="text-slate-900 font-semibold">Email</TableHead>
-            <TableHead className="text-slate-900 font-semibold">Phone</TableHead>
-            <TableHead className="text-right text-slate-900 font-semibold">Credit Limit</TableHead>
-            <TableHead className="text-right text-slate-900 font-semibold">Outstanding</TableHead>
+            <SortableTableHead field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-slate-900 font-semibold">Name</SortableTableHead>
+            <SortableTableHead field="email" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-slate-900 font-semibold">Email</SortableTableHead>
+            <SortableTableHead field="contactNumber" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-slate-900 font-semibold">Phone</SortableTableHead>
+            <SortableTableHead field="creditLimit" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right text-slate-900 font-semibold">Credit Limit</SortableTableHead>
+            <SortableTableHead field="outstandingBalance" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right text-slate-900 font-semibold">Outstanding</SortableTableHead>
             <TableHead className="text-slate-900 font-semibold">Status</TableHead>
-            <TableHead className="text-slate-900 font-semibold">Loyalty</TableHead>
-            <TableHead className="text-slate-900 font-semibold">Segment</TableHead>
+            <SortableTableHead field="loyaltyPoints" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-slate-900 font-semibold">Loyalty</SortableTableHead>
+            <SortableTableHead field="aiSegment" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-slate-900 font-semibold">Segment</SortableTableHead>
             <TableHead className="text-slate-900 font-semibold">Actions</TableHead>
           </TableRow>
         </TableHeader>

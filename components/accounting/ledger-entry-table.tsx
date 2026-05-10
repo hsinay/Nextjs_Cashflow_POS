@@ -1,7 +1,6 @@
-// components/accounting/ledger-entry-table.tsx
-
 'use client';
 
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import {
     Table,
     TableBody,
@@ -11,6 +10,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/currency';
+import { useUrlSort } from '@/lib/use-url-sort';
 import { LedgerEntry } from '@/types/ledger.types';
 
 interface LedgerEntryTableProps {
@@ -18,15 +18,17 @@ interface LedgerEntryTableProps {
 }
 
 export function LedgerEntryTable({ entries }: LedgerEntryTableProps) {
+  const { sortField, sortDir, handleSort } = useUrlSort();
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead>Debit Account</TableHead>
-          <TableHead>Credit Account</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
+          <SortableTableHead field="entryDate" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Date</SortableTableHead>
+          <SortableTableHead field="description" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Description</SortableTableHead>
+          <SortableTableHead field="debitAccount" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Debit Account</SortableTableHead>
+          <SortableTableHead field="creditAccount" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Credit Account</SortableTableHead>
+          <SortableTableHead field="amount" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right">Amount</SortableTableHead>
           <TableHead>Reference ID</TableHead>
         </TableRow>
       </TableHeader>

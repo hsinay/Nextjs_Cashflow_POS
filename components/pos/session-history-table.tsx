@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import {
     Table,
     TableBody,
@@ -11,6 +12,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
+import { useUrlSort } from '@/lib/use-url-sort';
 import { POSSessionWithRelations } from '@/types/pos-session.types';
 import { Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -21,53 +23,42 @@ interface SessionHistoryTableProps {
 }
 
 export function SessionHistoryTable({ sessions }: SessionHistoryTableProps) {
-  // Sort by opened date descending
-  const sortedSessions = [...sessions].sort(
-    (a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime()
-  );
+  const { sortField, sortDir, handleSort } = useUrlSort();
 
   return (
     <Card className="overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50">
-            <TableHead>Date</TableHead>
-            <TableHead>Cashier</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Total Sales</TableHead>
-            <TableHead>Cash</TableHead>
-            <TableHead>Card</TableHead>
-            <TableHead>Digital</TableHead>
-            <TableHead>Transactions</TableHead>
-            <TableHead>Variance</TableHead>
+            <SortableTableHead field="openedAt" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Date</SortableTableHead>
+            <SortableTableHead field="cashier.username" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Cashier</SortableTableHead>
+            <SortableTableHead field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Status</SortableTableHead>
+            <SortableTableHead field="totalSalesAmount" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Total Sales</SortableTableHead>
+            <SortableTableHead field="totalCashReceived" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Cash</SortableTableHead>
+            <SortableTableHead field="totalCardReceived" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Card</SortableTableHead>
+            <SortableTableHead field="totalDigitalReceived" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Digital</SortableTableHead>
+            <SortableTableHead field="totalTransactions" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Transactions</SortableTableHead>
+            <SortableTableHead field="cashVariance" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Variance</SortableTableHead>
             <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedSessions.map((session) => (
+          {sessions.map((session) => (
             <TableRow key={session.id} className="hover:bg-gray-50">
               <TableCell className="font-medium">
                 {new Date(session.openedAt).toLocaleDateString()}{' '}
                 {new Date(session.openedAt).toLocaleTimeString()}
               </TableCell>
               <TableCell>{session.cashier?.username || 'Unknown'}</TableCell>
-              <TableCell>
-                <SessionStatusBadge status={session.status} />
-              </TableCell>
-              <TableCell className="font-semibold">
-                {formatCurrency(Number(session.totalSalesAmount))}
-              </TableCell>
+              <TableCell><SessionStatusBadge status={session.status} /></TableCell>
+              <TableCell className="font-semibold">{formatCurrency(Number(session.totalSalesAmount))}</TableCell>
               <TableCell>{formatCurrency(Number(session.totalCashReceived))}</TableCell>
               <TableCell>{formatCurrency(Number(session.totalCardReceived))}</TableCell>
               <TableCell>{formatCurrency(Number(session.totalDigitalReceived))}</TableCell>
               <TableCell className="text-center">{session.totalTransactions}</TableCell>
               <TableCell>
                 {session.cashVariance && Number(session.cashVariance) !== 0 ? (
-                  <span
-                    className={`font-semibold ${
-                      Number(session.cashVariance) > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
+                  <span className={`font-semibold ${Number(session.cashVariance) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {formatCurrency(Number(session.cashVariance))}
                   </span>
                 ) : (
@@ -76,9 +67,7 @@ export function SessionHistoryTable({ sessions }: SessionHistoryTableProps) {
               </TableCell>
               <TableCell>
                 <Link href={`/dashboard/pos/sessions/${session.id}`}>
-                  <Button variant="ghost" size="sm">
-                    <Eye className="w-4 h-4" />
-                  </Button>
+                  <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
                 </Link>
               </TableCell>
             </TableRow>

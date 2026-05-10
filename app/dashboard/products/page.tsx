@@ -3,6 +3,7 @@
 import { ProductListClient } from '@/components/products/product-list-client';
 import { Button } from '@/components/ui/button';
 import { authOptions } from '@/lib/auth';
+import { buildOrderBy } from '@/lib/build-order-by';
 import { prisma } from '@/lib/prisma';
 import { Plus } from 'lucide-react';
 import { getServerSession } from 'next-auth';
@@ -15,6 +16,8 @@ interface ProductsPageProps {
     category?: string;
     page?: string;
     limit?: string;
+    sortField?: string;
+    sortDir?: string;
   }>;
 }
 
@@ -23,6 +26,8 @@ async function getProducts(searchParams: Awaited<ProductsPageProps['searchParams
     const page = parseInt(searchParams.page || '1');
     const limit = parseInt(searchParams.limit || '10');
     const skip = (page - 1) * limit;
+    const sortField = searchParams.sortField;
+    const sortDir = searchParams.sortDir as 'asc' | 'desc' | undefined;
 
     const whereClause: any = {
       isActive: true,
@@ -73,9 +78,7 @@ async function getProducts(searchParams: Awaited<ProductsPageProps['searchParams
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: buildOrderBy(sortField, sortDir, { createdAt: 'desc' }),
         skip,
         take: limit,
       }),

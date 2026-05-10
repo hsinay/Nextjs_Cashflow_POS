@@ -14,6 +14,8 @@ interface LedgerPageProps {
     referenceId?: string;
     page?: string;
     limit?: string;
+    sortField?: string;
+    sortDir?: string;
   };
 }
 
@@ -31,6 +33,8 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
     referenceId: searchParams.referenceId,
     page: searchParams.page ? parseInt(searchParams.page) : 1,
     limit: searchParams.limit ? parseInt(searchParams.limit) : 20,
+    sortField: searchParams.sortField,
+    sortDir: searchParams.sortDir as 'asc' | 'desc' | undefined,
   }
 
   const { entries, pagination } = await getAllLedgerEntries(filters);

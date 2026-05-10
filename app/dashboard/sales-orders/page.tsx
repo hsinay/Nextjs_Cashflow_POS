@@ -17,6 +17,8 @@ interface SalesOrdersPageProps {
     status?: string;
     page?: string;
     limit?: string;
+    sortField?: string;
+    sortDir?: string;
   }>;
 }
 
@@ -34,6 +36,8 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
     status: resolvedSearchParams.status,
     page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page) : 1,
     limit: resolvedSearchParams.limit ? parseInt(resolvedSearchParams.limit) : 10,
+    sortField: resolvedSearchParams.sortField,
+    sortDir: resolvedSearchParams.sortDir as 'asc' | 'desc' | undefined,
   }
 
   const { orders, pagination } = await getAllSalesOrders(filters);

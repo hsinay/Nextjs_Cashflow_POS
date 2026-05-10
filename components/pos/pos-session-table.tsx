@@ -1,7 +1,6 @@
-// components/pos/pos-session-table.tsx
-
 'use client';
 
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import {
     Table,
     TableBody,
@@ -10,8 +9,9 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { POSSession } from '@/types/pos.types';
 import { formatCurrency } from '@/lib/utils';
+import { useUrlSort } from '@/lib/use-url-sort';
+import { POSSession } from '@/types/pos.types';
 import { Badge } from '@/components/ui/badge';
 
 interface POSSessionTableProps {
@@ -19,18 +19,20 @@ interface POSSessionTableProps {
 }
 
 export function POSSessionTable({ sessions }: POSSessionTableProps) {
+  const { sortField, sortDir, handleSort } = useUrlSort();
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Session ID</TableHead>
-          <TableHead>Cashier</TableHead>
-          <TableHead>Terminal</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Opened At</TableHead>
-          <TableHead>Closed At</TableHead>
-          <TableHead className="text-right">Total Sales</TableHead>
-          <TableHead className="text-right">Cash Variance</TableHead>
+          <SortableTableHead field="cashier.username" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Cashier</SortableTableHead>
+          <SortableTableHead field="terminalId" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Terminal</SortableTableHead>
+          <SortableTableHead field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Status</SortableTableHead>
+          <SortableTableHead field="openedAt" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Opened At</SortableTableHead>
+          <SortableTableHead field="closedAt" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Closed At</SortableTableHead>
+          <SortableTableHead field="totalSalesAmount" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right">Total Sales</SortableTableHead>
+          <SortableTableHead field="cashVariance" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right">Cash Variance</SortableTableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

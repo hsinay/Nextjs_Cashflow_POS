@@ -3,6 +3,7 @@
 
 'use client';
 
+import { Autocomplete, AutocompleteOption } from '@/components/ui/autocomplete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -203,30 +204,30 @@ export function PurchaseOrderForm({ suppliers, products, initialData }: Purchase
                                     control={form.control}
                                     name={isEditing ? `items.update.${index}.productId` : `items.${index}.productId`}
                                     render={({ field }) => {
-                                        const selectedProduct = products.find(p => p.id === field.value);
+                                        const productOptions: AutocompleteOption[] = products.map(p => ({
+                                            id: p.id,
+                                            label: p.name,
+                                            value: p.id,
+                                        }));
                                         return (
                                             <FormItem className="col-span-4">
                                                 <FormLabel>Product</FormLabel>
-                                                <Select onValueChange={(value) => {
-                                                    field.onChange(value);
-                                                    const product = products.find(p => p.id === value);
-                                                    if (product) {
-                                                        form.setValue(`items.${index}.unitPrice`, Number(product.costPrice) || 0);
-                                                    }
-                                                }} value={field.value || ''}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a product">
-                                                            {selectedProduct ? selectedProduct.name : 'Select a product'}
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {products.map((product) => (
-                                                            <SelectItem key={product.id} value={product.id}>
-                                                                {product.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Autocomplete
+                                                    options={productOptions}
+                                                    value={field.value || ''}
+                                                    onChange={(value) => {
+                                                        field.onChange(value);
+                                                        const product = products.find(p => p.id === value);
+                                                        if (product) {
+                                                            const priceField = isEditing
+                                                                ? `items.update.${index}.unitPrice`
+                                                                : `items.${index}.unitPrice`;
+                                                            form.setValue(priceField as any, Number(product.costPrice) || 0);
+                                                        }
+                                                    }}
+                                                    placeholder="Select a product"
+                                                    searchPlaceholder="Search products..."
+                                                />
                                                 <FormMessage />
                                             </FormItem>
                                         );

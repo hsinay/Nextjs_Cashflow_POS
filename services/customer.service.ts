@@ -1,6 +1,7 @@
 // services/customer.service.ts
 
 import { prisma } from '@/lib/prisma';
+import { buildOrderBy } from '@/lib/build-order-by';
 import { createCustomerSchema, updateCustomerSchema } from '@/lib/validations/customer.schema';
 import type { SalesOrder } from '@/types/sales-order.types';
 import type { Customer } from '@/types/customer.types';
@@ -33,7 +34,7 @@ export const CustomerService = {
    * This is a conditional optimization - benefits from lightweight query when filters not used
    */
   async getAllCustomers(filters: CustomerFilters) {
-    const { search, segment, highRisk, creditIssues, page = 1, limit = 20 } = filters;
+    const { search, segment, highRisk, creditIssues, page = 1, limit = 20, sortField, sortDir } = filters;
     const where: any = { isActive: true };
     if (search) {
       where.OR = [
@@ -45,50 +46,51 @@ export const CustomerService = {
     if (segment) where.aiSegment = segment;
     const skip = (page - 1) * limit;
     
-    // If no balance-dependent filters, use lightweight query
-    if (!highRisk && !creditIssues) {
-      const [customers, total] = await Promise.all([
-        prisma.customer.findMany({
-          where,
-          orderBy: { createdAt: 'desc' },
-          skip,
-          take: limit,
-        }),
-        prisma.customer.count({ where }),
-      ]);
-      
-      return {
-        customers: convertToNumber(customers) as Customer[],
-        pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
-      };
+    const sortByBalance = sortField === 'outstandingBalance';
+    const orderBy = sortByBalance ? { createdAt: 'desc' } : buildOrderBy(sortField, sortDir, { createdAt: 'desc' });
+
+    // When sorting by outstandingBalance (computed field), we must fetch all rows, attach
+    // balances, sort in-memory, then paginate — Prisma can't ORDER BY an aggregated subquery.
+    const [allCustomers, total] = await Promise.all([
+      prisma.customer.findMany({
+        where,
+        orderBy,
+        ...(sortByBalance ? {} : { skip, take: limit }),
+      }),
+      prisma.customer.count({ where }),
+    ]);
+
+    // Fetch outstanding balances in a single grouped query
+    const balanceRows = await prisma.salesOrder.groupBy({
+      by: ['customerId'],
+      where: {
+        customerId: { in: allCustomers.map((c) => c.id) },
+        status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
+      },
+      _sum: { balanceAmount: true },
+    });
+    const balanceMap = Object.fromEntries(
+      balanceRows.map((r) => [r.customerId, Number(r._sum.balanceAmount ?? 0)])
+    );
+
+    let customersWithBalance = (convertToNumber(allCustomers) as Customer[]).map((c) => ({
+      ...c,
+      outstandingBalance: balanceMap[c.id] ?? 0,
+    }));
+
+    if (sortByBalance) {
+      const dir = sortDir === 'desc' ? -1 : 1;
+      customersWithBalance.sort((a, b) => dir * (a.outstandingBalance - b.outstandingBalance));
     }
 
-    // Otherwise, fetch with balance for filtering
-    const customers = await prisma.customer.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit,
-    });
-    const total = await prisma.customer.count({ where });
-    
-    const customersWithBalance = await Promise.all(
-      customers.map(async (c) => {
-        const outstandingBalance = await CustomerService.calculateOutstandingBalance(c.id);
-        const customerWithNumbers = convertToNumber(c) as Customer;
-        return {
-          ...customerWithNumbers,
-          outstandingBalance,
-        };
-      })
-    );
-    
     // Filter by highRisk/creditIssues if needed
     let filtered = customersWithBalance;
-    if (highRisk) filtered = filtered.filter(c => (c.churnRiskScore ?? 0) > 0.7);
-    if (creditIssues) filtered = filtered.filter(c => c.outstandingBalance >= c.creditLimit);
-    
-    const effectiveTotal = (highRisk || creditIssues) ? filtered.length : total;
+    if (highRisk) filtered = filtered.filter((c) => (c.churnRiskScore ?? 0) > 0.7);
+    if (creditIssues) filtered = filtered.filter((c) => c.outstandingBalance >= c.creditLimit);
+
+    if (sortByBalance) filtered = filtered.slice(skip, skip + limit);
+
+    const effectiveTotal = highRisk || creditIssues ? filtered.length : total;
     return {
       customers: filtered,
       pagination: {

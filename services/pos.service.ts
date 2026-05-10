@@ -1,4 +1,5 @@
 import { BadRequestError, NotFoundError } from '@/lib/errors';
+import { buildOrderBy } from '@/lib/build-order-by';
 import { prisma } from '@/lib/prisma';
 import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
@@ -272,24 +273,18 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
 
                 const itemTotalPrice = unitPrice.times(quantity).minus(discountApplied);
                 const itemTaxAmount = itemTotalPrice.times(taxRate.dividedBy(100));
-                
+
                 subtotalAmount = subtotalAmount.plus(itemTotalPrice);
                 totalTaxAmount = totalTaxAmount.plus(itemTaxAmount);
                 totalDiscountAmount = totalDiscountAmount.plus(discountApplied);
 
-                // Decrement product stock
-                await tx.product.update({
-                    where: { id: product.id },
-                    data: { stockQuantity: { decrement: item.quantity } },
-                });
-
-                // Create inventory transaction for sale
+                // Create inventory transaction for sale (also decrements stock)
                 await createInventoryTransaction({
                     productId: product.id,
                     transactionType: 'POS_SALE',
                     quantity: item.quantity,
                     referenceId: transactionNumber,
-                });
+                }, tx as any);
 
                 return {
                     productId: item.productId,
@@ -637,7 +632,7 @@ export async function getTransactionsBySessionId(sessionId: string): Promise<Tra
 }
 
 export async function getAllPOSSessions(filters: any): Promise<PaginatedPOSSessions> {
-    const { cashierId, status, startDate, endDate, page = 1, limit = 20 } = filters;
+    const { cashierId, status, startDate, endDate, page = 1, limit = 20, sortField, sortDir } = filters;
     const skip = (page - 1) * limit;
 
     const where: Prisma.POSSessionWhereInput = {};
@@ -662,7 +657,7 @@ export async function getAllPOSSessions(filters: any): Promise<PaginatedPOSSessi
         where,
         skip,
         take: limit,
-        orderBy: { openedAt: 'desc' },
+        orderBy: buildOrderBy(sortField, sortDir, { openedAt: 'desc' }),
         include: { cashier: true },
     });
 

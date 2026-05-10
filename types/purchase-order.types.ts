@@ -61,6 +61,8 @@ export interface PurchaseOrderFilters {
   status?: string;
   page?: number;
   limit?: number;
+  sortField?: string;
+  sortDir?: 'asc' | 'desc';
 }
 
 export interface PaginatedPurchaseOrders {

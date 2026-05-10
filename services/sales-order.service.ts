@@ -1,6 +1,7 @@
 // services/sales-order.service.ts
 
 import { prisma } from '@/lib/prisma';
+import { buildOrderBy } from '@/lib/build-order-by';
 import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
     CreateSalesOrderInput,
@@ -86,8 +87,7 @@ function getSalesOrderFinancialState(
  * Get all sales orders with filtering, searching, and pagination
  */
 export async function getAllSalesOrders(filters: SalesOrderFilters): Promise<PaginatedSalesOrders> {
-  // TODO: Implement filtering and pagination
-  const { page = 1, limit = 20 } = filters;
+  const { page = 1, limit = 20, sortField, sortDir } = filters;
   const skip = (page - 1) * limit;
 
   const orders = await prisma.salesOrder.findMany({
@@ -101,7 +101,7 @@ export async function getAllSalesOrders(filters: SalesOrderFilters): Promise<Pag
     },
     skip,
     take: limit,
-    orderBy: { createdAt: 'desc' },
+    orderBy: buildOrderBy(sortField, sortDir, { createdAt: 'desc' }),
   });
 
   const total = await prisma.salesOrder.count();

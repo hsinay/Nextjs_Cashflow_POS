@@ -15,6 +15,8 @@ interface POSSessionsPageProps {
     endDate?: string;
     page?: string;
     limit?: string;
+    sortField?: string;
+    sortDir?: string;
   };
 }
 
@@ -32,6 +34,8 @@ export default async function POSSessionsPage({ searchParams }: POSSessionsPageP
     endDate: searchParams.endDate ? new Date(searchParams.endDate) : undefined,
     page: searchParams.page ? parseInt(searchParams.page) : 1,
     limit: searchParams.limit ? parseInt(searchParams.limit) : 20,
+    sortField: searchParams.sortField,
+    sortDir: searchParams.sortDir as 'asc' | 'desc' | undefined,
   }
 
   const { sessions, pagination } = await getAllPOSSessions(filters);

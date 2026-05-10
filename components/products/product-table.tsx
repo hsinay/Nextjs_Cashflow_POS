@@ -17,6 +17,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import {
     Table,
     TableBody,
@@ -27,6 +28,7 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/currency';
 import { getOptimizedImageUrl } from '@/lib/image-url';
+import { useUrlSort } from '@/lib/use-url-sort';
 import { Product } from '@/types/product.types';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -38,15 +40,12 @@ interface ProductTableProps {
   onDelete?: (id: string) => Promise<void>;
 }
 
-export function ProductTable({
-  products,
-  onDelete,
-}: ProductTableProps) {
+export function ProductTable({ products, onDelete }: ProductTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { sortField, sortDir, handleSort } = useUrlSort();
 
   const handleDelete = async (id: string) => {
     if (!onDelete) return;
-
     try {
       setDeletingId(id);
       await onDelete(id);
@@ -60,23 +59,17 @@ export function ProductTable({
   const getStockStatus = (product: Product) => {
     if (!product.isActive) return 'inactive';
     if (product.stockQuantity === 0) return 'out-of-stock';
-    if (product.reorderLevel && product.stockQuantity <= product.reorderLevel)
-      return 'low-stock';
+    if (product.reorderLevel && product.stockQuantity <= product.reorderLevel) return 'low-stock';
     return 'in-stock';
   };
 
   const getStockStatusColor = (status: string) => {
     switch (status) {
-      case 'in-stock':
-        return 'bg-green-100 text-green-800';
-      case 'low-stock':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'out-of-stock':
-        return 'bg-red-100 text-red-800';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'in-stock': return 'bg-green-100 text-green-800';
+      case 'low-stock': return 'bg-yellow-100 text-yellow-800';
+      case 'out-of-stock': return 'bg-red-100 text-red-800';
+      case 'inactive': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -97,11 +90,11 @@ export function ProductTable({
         <TableHeader>
           <TableRow className="bg-gray-50">
             <TableHead className="w-[80px]">Image</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>SKU</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead className="text-right">Price</TableHead>
-            <TableHead className="text-right">Stock</TableHead>
+            <SortableTableHead field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Name</SortableTableHead>
+            <SortableTableHead field="sku" sortField={sortField} sortDir={sortDir} onSort={handleSort}>SKU</SortableTableHead>
+            <SortableTableHead field="category.name" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Category</SortableTableHead>
+            <SortableTableHead field="price" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right">Price</SortableTableHead>
+            <SortableTableHead field="stockQuantity" sortField={sortField} sortDir={sortDir} onSort={handleSort} className="text-right">Stock</SortableTableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -120,13 +113,7 @@ export function ProductTable({
                   {product.imageUrl ? (
                     <div className="relative w-12 h-12 rounded border overflow-hidden bg-gray-100">
                       <Image
-                        src={getOptimizedImageUrl(product.imageUrl, {
-                          width: 96,
-                          height: 96,
-                          quality: 75,
-                          format: 'auto',
-                          crop: 'at_max',
-                        })}
+                        src={getOptimizedImageUrl(product.imageUrl, { width: 96, height: 96, quality: 75, format: 'auto', crop: 'at_max' })}
                         alt={product.name}
                         fill
                         className="object-cover"
@@ -140,45 +127,28 @@ export function ProductTable({
                   )}
                 </TableCell>
                 <TableCell className="font-medium">
-                  <Link
-                    href={`/dashboard/products/${product.id}`}
-                    className="text-blue-600 hover:underline"
-                  >
+                  <Link href={`/dashboard/products/${product.id}`} className="text-blue-600 hover:underline">
                     {product.name}
                   </Link>
                 </TableCell>
-                <TableCell className="text-sm text-gray-600">
-                  {product.sku || '—'}
-                </TableCell>
-                <TableCell className="text-sm">
-                  {product.category?.name || '—'}
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  {formatCurrency(Number(product.price))}
-                </TableCell>
+                <TableCell className="text-sm text-gray-600">{product.sku || '—'}</TableCell>
+                <TableCell className="text-sm">{product.category?.name || '—'}</TableCell>
+                <TableCell className="text-right font-medium">{formatCurrency(Number(product.price))}</TableCell>
                 <TableCell className="text-right">
                   <div>
                     <div className="font-medium">{product.stockQuantity}</div>
                     {product.reorderLevel && (
-                      <div className="text-xs text-gray-500">
-                        Min: {product.reorderLevel}
-                      </div>
+                      <div className="text-xs text-gray-500">Min: {product.reorderLevel}</div>
                     )}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge className={getStockStatusColor(stockStatus)}>
-                    {statusLabel}
-                  </Badge>
+                  <Badge className={getStockStatusColor(stockStatus)}>{statusLabel}</Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={deletingId === product.id}
-                      >
+                      <Button variant="ghost" size="sm" disabled={deletingId === product.id}>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -190,11 +160,8 @@ export function ProductTable({
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/products/${product.id}`}>
-                          View Details
-                        </Link>
+                        <Link href={`/dashboard/products/${product.id}`}>View Details</Link>
                       </DropdownMenuItem>
-
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <DropdownMenuItem
@@ -208,8 +175,7 @@ export function ProductTable({
                         <AlertDialogContent>
                           <AlertDialogTitle>Delete Product</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete "{product.name}"? This action
-                            cannot be undone.
+                            Are you sure you want to delete "{product.name}"? This action cannot be undone.
                           </AlertDialogDescription>
                           <div className="flex justify-end gap-4">
                             <AlertDialogCancel>Cancel</AlertDialogCancel>

@@ -1,6 +1,7 @@
 // services/supplier.service.ts
 
 import { prisma } from '@/lib/prisma';
+import { buildOrderBy } from '@/lib/build-order-by';
 import { createSupplierSchema, updateSupplierSchema } from '@/lib/validations/supplier.schema';
 import { CreateSupplierInput, SupplierFilters, UpdateSupplierInput } from '@/types/supplier.types';
 
@@ -10,7 +11,7 @@ export const SupplierService = {
    * This is a conditional optimization - benefits from lightweight query when filters not used
    */
   async getAllSuppliers(filters: SupplierFilters) {
-    const { search, creditIssues, isActive = true, page = 1, limit = 20 } = filters;
+    const { search, creditIssues, isActive = true, page = 1, limit = 20, sortField, sortDir } = filters;
     const where: any = { isActive };
     
     if (search) {
@@ -25,10 +26,11 @@ export const SupplierService = {
     
     // If no balance-dependent filters, use lightweight query
     if (!creditIssues) {
+      const orderBy = buildOrderBy(sortField, sortDir, { createdAt: 'desc' });
       const [suppliers, total] = await Promise.all([
         prisma.supplier.findMany({
           where,
-          orderBy: { createdAt: 'desc' },
+          orderBy,
           skip,
           take: limit,
         }),
@@ -46,9 +48,10 @@ export const SupplierService = {
     }
     
     // Otherwise, fetch with balance for filtering
+    const orderBy = buildOrderBy(sortField, sortDir, { createdAt: 'desc' });
     const suppliers = await prisma.supplier.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       skip,
       take: limit,
     });

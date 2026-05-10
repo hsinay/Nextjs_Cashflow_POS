@@ -183,6 +183,8 @@ export interface PaymentFilters {
   isReconciled?: boolean;
   page?: number;
   limit?: number;
+  sortField?: string;
+  sortDir?: 'asc' | 'desc';
 }
 
 export interface PaginatedPayments {

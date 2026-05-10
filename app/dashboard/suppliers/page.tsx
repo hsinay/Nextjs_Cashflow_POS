@@ -13,12 +13,16 @@ export default async function SuppliersPage({ searchParams }: { searchParams?: P
   const limit = Number(resolvedParams?.limit || 20);
   const search = resolvedParams?.search || '';
   const creditIssues = resolvedParams?.creditIssues === 'true';
+  const sortField = resolvedParams?.sortField;
+  const sortDir = resolvedParams?.sortDir as 'asc' | 'desc' | undefined;
 
   const { suppliers, pagination } = await SupplierService.getAllSuppliers({
     search,
     creditIssues,
     page,
     limit,
+    sortField,
+    sortDir,
   });
 
   return (

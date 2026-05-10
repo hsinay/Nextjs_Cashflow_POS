@@ -15,6 +15,8 @@ export default async function CustomersPage({ searchParams }: { searchParams?: P
   const segment = resolvedParams?.segment as CustomerSegment | undefined;
   const highRisk = resolvedParams?.highRisk === 'true';
   const creditIssues = resolvedParams?.creditIssues === 'true';
+  const sortField = resolvedParams?.sortField;
+  const sortDir = resolvedParams?.sortDir as 'asc' | 'desc' | undefined;
 
   const { customers, pagination } = await CustomerService.getAllCustomers({
     search,
@@ -23,6 +25,8 @@ export default async function CustomersPage({ searchParams }: { searchParams?: P
     creditIssues,
     page,
     limit,
+    sortField,
+    sortDir,
   });
 
   return (

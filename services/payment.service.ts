@@ -1,4 +1,5 @@
 import { getCurrencyCode } from '@/lib/currency';
+import { buildOrderBy } from '@/lib/build-order-by';
 import { prisma } from '@/lib/prisma';
 import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
@@ -527,7 +528,7 @@ async function applySupplierPaymentApplications(
 }
 
 export async function getAllPayments(filters: PaymentFilters): Promise<PaginatedPayments> {
-  const { search, payerType, payerId, paymentMethod, startDate, endDate, page = 1, limit = 20 } = filters;
+  const { search, payerType, payerId, paymentMethod, startDate, endDate, page = 1, limit = 20, sortField, sortDir } = filters;
   const skip = (page - 1) * limit;
 
   const where: Prisma.PaymentWhereInput = {};
@@ -561,7 +562,7 @@ export async function getAllPayments(filters: PaymentFilters): Promise<Paginated
     where,
     skip,
     take: limit,
-    orderBy: { paymentDate: 'desc' },
+    orderBy: buildOrderBy(sortField, sortDir, { paymentDate: 'desc' }),
     include: {
       customer: true,
       supplier: true,

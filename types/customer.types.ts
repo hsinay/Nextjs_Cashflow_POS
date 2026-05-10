@@ -52,6 +52,8 @@ export interface CustomerFilters {
   creditIssues?: boolean;
   page?: number;
   limit?: number;
+  sortField?: string;
+  sortDir?: 'asc' | 'desc';
 }
 
 export interface CreditStatus {

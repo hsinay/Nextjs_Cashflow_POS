@@ -21,6 +21,8 @@ interface PaymentsPageProps {
     endDate?: string;
     page?: string;
     limit?: string;
+    sortField?: string;
+    sortDir?: string;
   }>;
 }
 
@@ -41,6 +43,8 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
     endDate: resolvedSearchParams.endDate ? new Date(resolvedSearchParams.endDate) : undefined,
     page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page) : 1,
     limit: resolvedSearchParams.limit ? parseInt(resolvedSearchParams.limit) : 20,
+    sortField: resolvedSearchParams.sortField,
+    sortDir: resolvedSearchParams.sortDir as 'asc' | 'desc' | undefined,
   }
 
   const { payments, pagination } = await getAllPayments(filters);

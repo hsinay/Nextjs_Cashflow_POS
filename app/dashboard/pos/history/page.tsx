@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { buildOrderBy } from '@/lib/build-order-by';
 import { ArrowLeft } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import Link from 'next/link';
@@ -20,6 +21,8 @@ interface POSHistoryPageProps {
     endDate?: string;
     page?: string;
     limit?: string;
+    sortField?: string;
+    sortDir?: string;
   }>;
 }
 
@@ -86,7 +89,7 @@ export default async function POSHistoryPage({ searchParams: searchParamsPromise
           cashier: { select: { id: true, username: true, email: true } },
           dayBook: { select: { id: true, date: true, status: true } },
         },
-        orderBy: { openedAt: 'desc' },
+        orderBy: buildOrderBy(searchParams.sortField, searchParams.sortDir as 'asc' | 'desc' | undefined, { openedAt: 'desc' }),
         skip,
         take: limit,
       }),

@@ -7,15 +7,16 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 
 interface EditProductPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function EditProductPage({ params }: EditProductPageProps) {
+  const { id } = use(params);
   const router = useRouter();
   const [product, setProduct] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
@@ -26,7 +27,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
     const fetchData = async () => {
       try {
         const [productRes, categoriesRes] = await Promise.all([
-          fetch(`/api/products/${params.id}`),
+          fetch(`/api/products/${id}`),
           fetch(`/api/categories?flat=true`),
         ]);
 
@@ -49,12 +50,12 @@ export default function EditProductPage({ params }: EditProductPageProps) {
     };
 
     fetchData();
-  }, [params.id, router]);
+  }, [id, router]);
 
   const handleSubmit = async (data: any) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/products/${params.id}`, {
+      const response = await fetch(`/api/products/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +69,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
         throw new Error(result.error || 'Failed to update product');
       }
 
-      router.push(`/dashboard/products/${params.id}`);
+      router.push(`/dashboard/products/${id}`);
       router.refresh();
     } catch (error: any) {
       throw new Error(error.message || 'Failed to update product');

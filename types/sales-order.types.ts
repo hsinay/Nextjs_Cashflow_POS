@@ -62,6 +62,8 @@ export interface SalesOrderFilters {
   status?: string;
   page?: number;
   limit?: number;
+  sortField?: string;
+  sortDir?: 'asc' | 'desc';
 }
 
 export interface PaginatedSalesOrders {

@@ -59,7 +59,7 @@ export function CustomerSelector({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           variant="outline"
-          className="w-full justify-between px-3 h-10 bg-white"
+          className="w-full justify-start px-3 h-10 bg-white pr-8"
         >
           <span className="text-left truncate flex-1">
             {selectedCustomer ? (
@@ -68,18 +68,19 @@ export function CustomerSelector({
               <span className="text-gray-500">Walk-in Customer</span>
             )}
           </span>
-          {selectedCustomer && !disabled && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClearSelection();
-              }}
-              className="ml-2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
         </Button>
+        {selectedCustomer && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClearSelection();
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Search Dropdown */}
         {isOpen && !disabled && (

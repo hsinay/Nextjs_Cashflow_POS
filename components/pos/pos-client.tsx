@@ -539,7 +539,10 @@ export function POSClient({ initialSession, products, categories, customers: _cu
                 body: JSON.stringify(transactionData),
             });
 
-            if (!response.ok) throw new Error('Failed to process transaction');
+            if (!response.ok) {
+                const errBody = await response.json().catch(() => ({}));
+                throw new Error(errBody?.error || 'Failed to process transaction');
+            }
 
             toast({ title: 'Success', description: `Transaction ${transactionNumber} completed.` });
             handleClearCart();
@@ -1308,6 +1311,20 @@ interface CartItemRowProps {
 
 function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
     const hasDiscount = item.priceBeforeDiscount && item.unitPrice < item.priceBeforeDiscount;
+    const [inputValue, setInputValue] = useState(String(item.quantity));
+
+    useEffect(() => {
+        setInputValue(String(item.quantity));
+    }, [item.quantity]);
+
+    const commitQty = (raw: string) => {
+        const parsed = parseInt(raw, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+            onUpdateQuantity(item.product.id, parsed);
+        } else {
+            setInputValue(String(item.quantity));
+        }
+    };
     
     return (
         <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 text-xs">
@@ -1380,23 +1397,45 @@ function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
             </div>
 
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 bg-white border border-gray-300 rounded">
+                <div className="flex items-center bg-white border border-gray-300 rounded overflow-hidden">
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
-                        className="h-6 w-6 p-0"
+                        className="h-7 w-7 p-0 rounded-none border-r border-gray-300 flex-shrink-0"
                     >
                         <Minus className="w-2.5 h-2.5" />
                     </Button>
-                    <span className="text-xs font-medium w-6 text-center">
-                        {item.quantity}
-                    </span>
+                    <input
+                        type="number"
+                        min={1}
+                        value={inputValue}
+                        onChange={(e) => {
+                            setInputValue(e.target.value);
+                            const parsed = parseInt(e.target.value, 10);
+                            if (!isNaN(parsed) && parsed > 0) {
+                                onUpdateQuantity(item.product.id, parsed);
+                            }
+                        }}
+                        onBlur={(e) => commitQty(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                            } else if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                onUpdateQuantity(item.product.id, item.quantity + 1);
+                            } else if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                onUpdateQuantity(item.product.id, item.quantity - 1);
+                            }
+                        }}
+                        className="w-10 text-xs font-medium text-center bg-transparent focus:outline-none focus:bg-blue-50 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
-                        className="h-6 w-6 p-0"
+                        className="h-7 w-7 p-0 rounded-none border-l border-gray-300 flex-shrink-0"
                     >
                         <Plus className="w-2.5 h-2.5" />
                     </Button>

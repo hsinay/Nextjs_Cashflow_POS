@@ -1,7 +1,6 @@
-// components/inventory/inventory-transaction-table.tsx
-
 'use client';
 
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import {
     Table,
     TableBody,
@@ -10,6 +9,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useUrlSort } from '@/lib/use-url-sort';
 import { InventoryTransaction } from '@/types/inventory.types';
 
 interface InventoryTransactionTableProps {
@@ -17,15 +17,17 @@ interface InventoryTransactionTableProps {
 }
 
 export function InventoryTransactionTable({ transactions }: InventoryTransactionTableProps) {
+  const { sortField, sortDir, handleSort } = useUrlSort();
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Product</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Quantity</TableHead>
+          <SortableTableHead field="product.name" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Product</SortableTableHead>
+          <SortableTableHead field="type" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Type</SortableTableHead>
+          <SortableTableHead field="quantity" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Quantity</SortableTableHead>
           <TableHead className="text-right">Unit Cost</TableHead>
-          <TableHead>Date</TableHead>
+          <SortableTableHead field="createdAt" sortField={sortField} sortDir={sortDir} onSort={handleSort}>Date</SortableTableHead>
           <TableHead>Notes</TableHead>
           <TableHead>Reference ID</TableHead>
         </TableRow>

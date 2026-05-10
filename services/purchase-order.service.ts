@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { buildOrderBy } from '@/lib/build-order-by';
 import runInteractiveTransaction from '@/lib/prisma-helpers';
 import {
     CreatePurchaseOrderInput,
@@ -83,7 +84,7 @@ async function getPurchaseOrderAllocatedAmount(tx: any, purchaseOrderId: string)
 }
 
 export async function getAllPurchaseOrders(filters: PurchaseOrderFilters): Promise<PaginatedPurchaseOrders> {
-  const { page = 1, limit = 20 } = filters;
+  const { page = 1, limit = 20, sortField, sortDir } = filters;
   const skip = (page - 1) * limit;
 
   const orders = await prisma.purchaseOrder.findMany({
@@ -97,7 +98,7 @@ export async function getAllPurchaseOrders(filters: PurchaseOrderFilters): Promi
     },
     skip,
     take: limit,
-    orderBy: { createdAt: 'desc' },
+    orderBy: buildOrderBy(sortField, sortDir, { createdAt: 'desc' }),
   });
 
   const total = await prisma.purchaseOrder.count();
