@@ -121,9 +121,9 @@ export async function closePOSSession(sessionId: string, data: UpdatePOSSessionI
     if (!existingSession) throw new NotFoundError('POS Session not found');
     if (existingSession.status === 'CLOSED') throw new BadRequestError('POS Session is already closed');
 
-    // Calculate totals and variance
+    // Calculate totals and variance — only count completed transactions
     const transactionsInSession = await prisma.transaction.findMany({
-        where: { sessionId },
+        where: { sessionId, status: 'COMPLETED' },
         include: { paymentDetails: true },
     });
 

@@ -38,10 +38,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       );
     }
     if (error instanceof Error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
+      const msg = error.message;
+      if (msg.includes('not found')) {
+        return NextResponse.json({ success: false, error: msg }, { status: 404 });
+      }
+      if (msg.includes('must be') || msg.includes('already')) {
+        return NextResponse.json({ success: false, error: msg }, { status: 409 });
+      }
+      return NextResponse.json({ success: false, error: msg }, { status: 500 });
     }
     return NextResponse.json(
       { success: false, error: 'Unknown error' },

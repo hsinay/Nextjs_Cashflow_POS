@@ -105,8 +105,15 @@ export async function POST(request: NextRequest) {
         );
     } catch (error: any) {
         logger.error({ err: error }, 'POST /api/payments error:');
-        if (error.message?.includes('not found')) {
-            return NextResponse.json({ success: false, error: error.message }, { status: 404 });
+        const msg = error.message || '';
+        if (msg.includes('not found')) {
+            return NextResponse.json({ success: false, error: msg }, { status: 404 });
+        }
+        if (msg.includes('exceeds') || msg.includes('Credit limit') || msg.includes('does not match') || msg.includes('cannot exceed')) {
+            return NextResponse.json({ success: false, error: msg }, { status: 409 });
+        }
+        if (msg.includes('Invalid payer')) {
+            return NextResponse.json({ success: false, error: msg }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }

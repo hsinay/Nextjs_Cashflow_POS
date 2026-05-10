@@ -81,26 +81,26 @@ export async function PATCH(request: NextRequest) {
         const oldQuantity = currentProduct.stockQuantity;
         const difference = update.quantity - oldQuantity;
 
-        // Update product
-        const updatedProduct = await prisma.product.update({
-          where: { id: update.productId },
-          data: { stockQuantity: update.quantity },
-          include: {
-            category: {
-              select: { id: true, name: true },
+        // Update product and create audit record atomically
+        const [updatedProduct] = await prisma.$transaction([
+          prisma.product.update({
+            where: { id: update.productId },
+            data: { stockQuantity: update.quantity },
+            include: {
+              category: {
+                select: { id: true, name: true },
+              },
             },
-          },
-        });
-
-        // Create transaction
-        await prisma.inventoryTransaction.create({
-          data: {
-            productId: update.productId,
-            type: 'ADJUSTMENT',
-            quantity: difference,
-            notes: `Bulk stock update: from ${oldQuantity} to ${update.quantity}`,
-          },
-        });
+          }),
+          prisma.inventoryTransaction.create({
+            data: {
+              productId: update.productId,
+              type: 'ADJUSTMENT',
+              quantity: difference,
+              notes: `Bulk stock update: from ${oldQuantity} to ${update.quantity}`,
+            },
+          }),
+        ]);
 
         results.push({
           id: updatedProduct.id,

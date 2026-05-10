@@ -259,10 +259,13 @@ async function reverseCustomerPaymentApplications(
 ) {
   const allocations = await getCustomerPaymentAllocations(tx, payment.id);
 
+  // No allocations means the payment was never applied to any order
+  // (e.g. advance payment when no orders were outstanding). Nothing to reverse.
   if (allocations.length === 0) {
-    throw new Error(
-      'Missing payment allocations for customer payment. Run the payment allocation backfill before editing, refunding, or deleting this payment.'
-    );
+    if (payment.customerId) {
+      await syncCustomerOutstandingBalance(tx, payment.customerId);
+    }
+    return [];
   }
 
   const affectedOrderIds: string[] = Array.from(
@@ -416,10 +419,12 @@ async function reverseSupplierPaymentApplications(
 ) {
   const allocations = await getSupplierPaymentAllocations(tx, payment.id);
 
+  // No allocations means the payment was never applied to any PO. Nothing to reverse.
   if (allocations.length === 0) {
-    throw new Error(
-      'Missing payment allocations for supplier payment. Run the payment allocation backfill before editing, refunding, or deleting this payment.'
-    );
+    if (payment.supplierId) {
+      await syncSupplierOutstandingBalance(tx, payment.supplierId);
+    }
+    return [];
   }
 
   const affectedOrderIds: string[] = Array.from(
@@ -695,19 +700,6 @@ export async function updatePayment(id: string, data: UpdatePaymentInput): Promi
       data.paymentDate !== undefined ||
       data.referenceNumber !== undefined;
 
-    if (
-      financialFieldsChanged &&
-      existingPayment.payerType === 'SUPPLIER' &&
-      existingPayment.supplierId
-    ) {
-      const supplierAllocations = await getSupplierPaymentAllocations(tx, existingPayment.id);
-      if (supplierAllocations.length === 0) {
-        throw new Error(
-          'Missing payment allocations for supplier payment. Run the payment allocation backfill before editing this payment.'
-        );
-      }
-    }
-
     const customerProjectionFieldsChanged =
       financialFieldsChanged || data.notes !== undefined;
 
@@ -867,21 +859,29 @@ export async function createRefund(data: CreateRefundInput): Promise<PaymentRefu
 }
 
 export async function approveRefund(refundId: string, approvedBy: string, notes?: string): Promise<PaymentRefund> {
-  const refund = await prisma.paymentRefund.update({
-    where: { id: refundId },
-    data: {
-      status: 'APPROVED',
-      approvedBy,
-      approvedAt: new Date(),
-      notes,
-    },
-  });
+  return runInteractiveTransaction(async (tx) => {
+    const existing = await tx.paymentRefund.findUnique({ where: { id: refundId } });
+    if (!existing) throw new Error('Refund not found');
+    if (existing.status !== 'PENDING') {
+      throw new Error(`Refund cannot be approved in status '${existing.status}'`);
+    }
 
-  return {
-    ...refund,
-    originalAmount: convertToNumber(refund.originalAmount),
-    refundAmount: convertToNumber(refund.refundAmount),
-  } as PaymentRefund;
+    const refund = await tx.paymentRefund.update({
+      where: { id: refundId },
+      data: {
+        status: 'APPROVED',
+        approvedBy,
+        approvedAt: new Date(),
+        notes,
+      },
+    });
+
+    return {
+      ...refund,
+      originalAmount: convertToNumber(refund.originalAmount),
+      refundAmount: convertToNumber(refund.refundAmount),
+    } as PaymentRefund;
+  });
 }
 
 export async function processRefund(refundId: string, processedBy: string, notes?: string): Promise<PaymentRefund> {

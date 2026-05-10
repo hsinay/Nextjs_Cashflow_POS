@@ -235,11 +235,15 @@ export async function processIntegratedPOSTransaction(
           totalDiscountAmount = totalDiscountAmount.plus(discount);
           totalCOGS = totalCOGS.plus(lineCost);
 
-          // DEDUCT INVENTORY
-          await tx.product.update({
+          // DEDUCT INVENTORY — read result to catch concurrent over-sells
+          const updatedProduct = await tx.product.update({
             where: { id: product.id },
             data: { stockQuantity: { decrement: quantity } },
+            select: { stockQuantity: true },
           });
+          if (updatedProduct.stockQuantity < 0) {
+            throw new Error(`Insufficient stock for product "${product.name}". Cannot sell ${quantity} unit(s).`);
+          }
 
           return {
             productId: product.id,
@@ -288,7 +292,7 @@ export async function processIntegratedPOSTransaction(
           entryDate: new Date(),
           description: `POS Sale - ${transactionNumber}${customerId ? ` (Customer: ${customerId.substring(0, 8)})` : ''}`,
           debitAccount,
-          creditAccount: 'Revenue',
+          creditAccount: 'Sales Revenue',
           amount: subtotalAmount,
           referenceId: transactionNumber,
         },
@@ -328,8 +332,8 @@ export async function processIntegratedPOSTransaction(
           data: {
             entryDate: new Date(),
             description: `Discount Expense - ${transactionNumber}`,
-            debitAccount: 'Discount Expense',
-            creditAccount: 'Revenue',
+            debitAccount: 'Refunds Expense',
+            creditAccount: 'Sales Revenue',
             amount: totalDiscountAmount,
             referenceId: transactionNumber,
           },

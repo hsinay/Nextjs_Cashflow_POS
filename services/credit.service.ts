@@ -186,51 +186,55 @@ class CreditService extends BaseRepository<CustomerCredit> {
     paymentId: string,
     allocations: PaymentAllocationInput[]
   ): Promise<void> {
-    for (const allocation of allocations) {
-      // Validate transaction exists and balance
-      const transaction = await prisma.creditTransaction.findUnique({
-        where: { id: allocation.creditTransactionId },
-      });
+    // Wrap all allocations in a single transaction so concurrent calls can't
+    // both pass the balance check and over-allocate the same credit transaction.
+    await prisma.$transaction(async (tx) => {
+      for (const allocation of allocations) {
+        // Re-read inside the transaction to get a consistent snapshot
+        const transaction = await tx.creditTransaction.findUnique({
+          where: { id: allocation.creditTransactionId },
+        });
 
-      if (!transaction) {
-        throw new Error(`Credit transaction ${allocation.creditTransactionId} not found`);
-      }
+        if (!transaction) {
+          throw new Error(`Credit transaction ${allocation.creditTransactionId} not found`);
+        }
 
-      if (new Prisma.Decimal(allocation.allocatedAmount).gt(transaction.balanceAmount)) {
-        throw new Error(
-          `Allocation amount exceeds outstanding balance for transaction ${allocation.creditTransactionId}`
-        );
-      }
+        if (new Prisma.Decimal(allocation.allocatedAmount).gt(transaction.balanceAmount)) {
+          throw new Error(
+            `Allocation amount exceeds outstanding balance for transaction ${allocation.creditTransactionId}`
+          );
+        }
 
-      // Create or update allocation
-      await prisma.paymentAllocation.upsert({
-        where: {
-          creditPaymentId_creditTransactionId: {
+        // Create or update allocation
+        await tx.paymentAllocation.upsert({
+          where: {
+            creditPaymentId_creditTransactionId: {
+              creditPaymentId: paymentId,
+              creditTransactionId: allocation.creditTransactionId,
+            },
+          },
+          update: {
+            allocatedAmount: new Prisma.Decimal(allocation.allocatedAmount),
+          },
+          create: {
             creditPaymentId: paymentId,
             creditTransactionId: allocation.creditTransactionId,
+            allocatedAmount: new Prisma.Decimal(allocation.allocatedAmount),
           },
-        },
-        update: {
-          allocatedAmount: new Prisma.Decimal(allocation.allocatedAmount),
-        },
-        create: {
-          creditPaymentId: paymentId,
-          creditTransactionId: allocation.creditTransactionId,
-          allocatedAmount: new Prisma.Decimal(allocation.allocatedAmount),
-        },
-      });
+        });
 
-      // Update transaction balance
-      const newBalance = transaction.balanceAmount.sub(allocation.allocatedAmount);
-      await prisma.creditTransaction.update({
-        where: { id: allocation.creditTransactionId },
-        data: {
-          paidAmount: transaction.paidAmount.add(allocation.allocatedAmount),
-          balanceAmount: newBalance,
-          isFullyPaid: newBalance.lte(0),
-        },
-      });
-    }
+        // Update transaction balance
+        const newBalance = transaction.balanceAmount.sub(allocation.allocatedAmount);
+        await tx.creditTransaction.update({
+          where: { id: allocation.creditTransactionId },
+          data: {
+            paidAmount: transaction.paidAmount.add(allocation.allocatedAmount),
+            balanceAmount: newBalance,
+            isFullyPaid: newBalance.lte(0),
+          },
+        });
+      }
+    });
   }
 
   /**

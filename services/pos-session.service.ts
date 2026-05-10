@@ -252,7 +252,7 @@ export const posSessionService = {
     }
 
     const transactions = await prisma.transaction.findMany({
-      where: { sessionId },
+      where: { sessionId, status: 'COMPLETED' },
       include: { paymentDetails: true },
     });
 

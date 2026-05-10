@@ -122,7 +122,15 @@ export async function POST(request: NextRequest) {
         if (error instanceof ApiError) {
             return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
         }
-        
+
+        const msg = error.message || '';
+        if (msg.includes('not found') || msg.includes('Not found')) {
+            return NextResponse.json({ success: false, error: msg }, { status: 404 });
+        }
+        if (msg.includes('Insufficient stock') || msg.includes('Not enough stock') || msg.includes('Credit limit') || msg.includes('insufficient')) {
+            return NextResponse.json({ success: false, error: msg }, { status: 409 });
+        }
+
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

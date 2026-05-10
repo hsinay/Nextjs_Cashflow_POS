@@ -376,12 +376,26 @@ export async function completePhysicalInventory(
       // Process each line with variance
       for (const line of pi.lines) {
         if (line.variance !== null && line.variance !== 0) {
-          // Create inventory transaction
+          // Guard against driving stock negative
+          if (line.variance < 0) {
+            const product = await tx.product.findUnique({
+              where: { id: line.productId },
+              select: { stockQuantity: true, name: true },
+            });
+            if (product && product.stockQuantity + line.variance < 0) {
+              throw new Error(
+                `Adjustment would drive stock negative for product "${product.name}". ` +
+                `Current: ${product.stockQuantity}, adjustment: ${line.variance}`
+              );
+            }
+          }
+
+          // Create inventory transaction with signed variance (positive = excess, negative = shortage)
           await tx.inventoryTransaction.create({
             data: {
               productId: line.productId,
               type: 'ADJUSTMENT',
-              quantity: Math.abs(line.variance),
+              quantity: line.variance,
               referenceId: piId,
               notes: `Physical count adjustment - ${line.variance > 0 ? 'Excess' : 'Shortage'} from ${pi.referenceNumber}`,
             },

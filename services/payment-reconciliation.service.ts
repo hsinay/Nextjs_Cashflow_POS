@@ -278,36 +278,25 @@ export async function generateSupplierStatement(
     orderBy: { paymentDate: 'asc' },
   });
 
-  // Build transaction list
-  const transactions: SupplierStatement['transactions'] = [];
-  let runningBalance = openingBalance;
+  // Build raw transaction list (without running balance yet)
+  type RawEntry = { date: Date; type: 'PO_CREATED' | 'PAYMENT_RECEIVED' | 'ADJUSTMENT'; referenceId: string; debit?: number; credit?: number };
+  const rawEntries: RawEntry[] = [];
 
-  // Add POs
   for (const po of posInPeriod) {
-    runningBalance += Number(po.totalAmount);
-    transactions.push({
-      date: po.orderDate,
-      type: 'PO_CREATED',
-      referenceId: po.id,
-      debit: Number(po.totalAmount),
-      balance: runningBalance,
-    });
+    rawEntries.push({ date: po.orderDate, type: 'PO_CREATED', referenceId: po.id, debit: Number(po.totalAmount) });
   }
-
-  // Add payments
   for (const payment of paymentsInPeriod) {
-    runningBalance -= Number(payment.amount);
-    transactions.push({
-      date: payment.paymentDate,
-      type: 'PAYMENT_RECEIVED',
-      referenceId: payment.id,
-      credit: Number(payment.amount),
-      balance: runningBalance,
-    });
+    rawEntries.push({ date: payment.paymentDate, type: 'PAYMENT_RECEIVED', referenceId: payment.id, credit: Number(payment.amount) });
   }
 
-  // Sort by date
-  transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+  // Sort chronologically first, then compute running balance in date order
+  rawEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  let runningBalance = openingBalance;
+  const transactions: SupplierStatement['transactions'] = rawEntries.map((entry) => {
+    runningBalance += (entry.debit ?? 0) - (entry.credit ?? 0);
+    return { ...entry, balance: runningBalance };
+  });
 
   const totalDebit = transactions.reduce((sum, t) => sum + (t.debit || 0), 0);
   const totalCredit = transactions.reduce((sum, t) => sum + (t.credit || 0), 0);

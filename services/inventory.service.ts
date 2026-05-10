@@ -42,10 +42,17 @@ export async function createInventoryTransaction(
             data: { stockQuantity: { increment: quantity } },
         });
     } else if (transactionType === 'SALE' || transactionType === 'POS_SALE') {
-        await client.product.update({
+        // Decrement and immediately verify stock didn't go negative.
+        // Using a select after decrement catches concurrent over-sells that bypassed
+        // the pre-check (two requests can both pass the stock check before either commits).
+        const updated = await client.product.update({
             where: { id: productId },
             data: { stockQuantity: { decrement: quantity } },
+            select: { stockQuantity: true, name: true },
         });
+        if (updated.stockQuantity < 0) {
+            throw new Error(`Insufficient stock for product "${updated.name}". Cannot sell ${quantity} unit(s).`);
+        }
     }
 
     return transaction as any;

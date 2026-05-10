@@ -356,42 +356,43 @@ export async function updatePricelist(
 ) {
   const { rules, ...pricelistData } = data;
 
-  if (rules) {
-    // Delete existing rules (will be replaced)
-    await prisma.pricelistRule.deleteMany({
-      where: { pricelistId: id },
-    });
-  }
+  // Wrap rule replacement in a transaction so rules are never permanently lost
+  // if the update step fails after deleteMany has already run.
+  return prisma.$transaction(async (tx) => {
+    if (rules) {
+      await tx.pricelistRule.deleteMany({ where: { pricelistId: id } });
+    }
 
-  return prisma.pricelist.update({
-    where: { id },
-    data: {
-      ...pricelistData,
-      rules: rules
-        ? {
-            create: rules.map((rule: any) => ({
-              productId: rule.productId,
-              name: rule.name,
-              minQuantity: rule.minQuantity ?? 1,
-              maxQuantity: rule.maxQuantity || null,
-              calculationType: rule.calculationType,
-              discountPercentage: rule.discountPercentage,
-              fixedPrice: rule.fixedPrice,
-              fixedDiscount: rule.fixedDiscount,
-              formulaMargin: rule.formulaMargin,
-              formulaMarkup: rule.formulaMarkup,
-              isActive: rule.isActive !== false,
-            })),
-          }
-        : undefined,
-    },
-    include: {
-      rules: {
-        include: {
-          product: { select: { id: true, name: true, sku: true } },
+    return tx.pricelist.update({
+      where: { id },
+      data: {
+        ...pricelistData,
+        rules: rules
+          ? {
+              create: rules.map((rule: any) => ({
+                productId: rule.productId,
+                name: rule.name,
+                minQuantity: rule.minQuantity ?? 1,
+                maxQuantity: rule.maxQuantity || null,
+                calculationType: rule.calculationType,
+                discountPercentage: rule.discountPercentage,
+                fixedPrice: rule.fixedPrice,
+                fixedDiscount: rule.fixedDiscount,
+                formulaMargin: rule.formulaMargin,
+                formulaMarkup: rule.formulaMarkup,
+                isActive: rule.isActive !== false,
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        rules: {
+          include: {
+            product: { select: { id: true, name: true, sku: true } },
+          },
         },
       },
-    },
+    });
   });
 }
 

@@ -80,7 +80,7 @@ export async function createPartialReceipt(
         },
       });
 
-      // Create inventory transaction
+      // Create inventory transaction — pass tx so it runs inside the same transaction
       if (item.quantityReceived > 0) {
         await createInventoryTransaction({
           productId: poItem.productId,
@@ -88,7 +88,7 @@ export async function createPartialReceipt(
           quantity: item.quantityReceived,
           referenceId: receipt.id,
           notes: `Partial receipt for PO ${purchaseOrderId}`,
-        });
+        }, tx as any);
       }
 
       totalAmount += Number(poItem.unitPrice) * item.quantityReceived;

@@ -358,25 +358,25 @@ class DayBookService {
       throw new Error("Day book not found");
     }
 
-    // Delete existing denominations for this day book
-    await prisma.cashDenomination.deleteMany({
-      where: { dayBookId },
-    });
+    // Wrap delete + create in a transaction so existing records are never
+    // permanently lost if the subsequent creates fail.
+    const created = await prisma.$transaction(async (tx) => {
+      await tx.cashDenomination.deleteMany({ where: { dayBookId } });
 
-    // Create new denomination records
-    const created = await Promise.all(
-      denominations.map((d) =>
-        prisma.cashDenomination.create({
-          data: {
-            dayBookId,
-            denomination: d.denomination,
-            quantity: d.quantity,
-            totalAmount: new Decimal(d.denomination * d.quantity),
-            notes: d.notes,
-          },
-        })
-      )
-    );
+      return Promise.all(
+        denominations.map((d) =>
+          tx.cashDenomination.create({
+            data: {
+              dayBookId,
+              denomination: d.denomination,
+              quantity: d.quantity,
+              totalAmount: new Decimal(d.denomination * d.quantity),
+              notes: d.notes,
+            },
+          })
+        )
+      );
+    });
 
     // Calculate total from denominations
     const totalCash = created.reduce(
