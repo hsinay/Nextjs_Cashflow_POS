@@ -6,26 +6,27 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 interface PricelistDetailPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function PricelistDetailPage({ params }: PricelistDetailPageProps) {
   const session = await getServerSession(authOptions);
-  
+
   // Verify user has permission
-  const hasPermission = session?.user && 
-    ((session.user as any).roles?.includes('ADMIN') || 
+  const hasPermission = session?.user &&
+    ((session.user as any).roles?.includes('ADMIN') ||
      (session.user as any).roles?.includes('INVENTORY_MANAGER'));
 
   if (!hasPermission) {
     redirect('/dashboard');
   }
 
+  const { id } = await params;
   let pricelist = null;
   let error = null;
 
   try {
-    pricelist = await getPricelistById(params.id);
+    pricelist = await getPricelistById(id);
   } catch (err: any) {
     error = err.message;
   }

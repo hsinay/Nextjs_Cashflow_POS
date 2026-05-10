@@ -10,9 +10,9 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
 interface POSTransactionPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function POSTransactionPage({
@@ -23,7 +23,8 @@ export default async function POSTransactionPage({
     redirect('/login');
   }
 
-  const transaction = await getTransactionById(params.id);
+  const { id } = await params;
+  const transaction = await getTransactionById(id);
 
   if (!transaction) {
     notFound();

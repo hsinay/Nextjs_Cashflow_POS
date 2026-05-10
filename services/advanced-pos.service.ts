@@ -1,5 +1,7 @@
+import runInteractiveTransaction from '@/lib/prisma-helpers';
 import { prisma } from '@/lib/prisma';
 import { ReceiptInput, RefundRequestInput, ShiftInput, TerminalInput } from '@/lib/validations/advanced-pos.schema';
+import { createInventoryTransaction } from './inventory.service';
 import {
     PeakHour,
     Receipt,
@@ -45,33 +47,59 @@ export class AdvancedPOSService {
   }
 
   /**
-   * Create refund request
+   * Create refund request — marks the transaction REFUNDED and restores inventory
    */
   async createRefundRequest(
     data: RefundRequestInput,
     _userId: string
   ): Promise<Refund> {
-    const transaction = await prisma.transaction.findUniqueOrThrow({
-      where: { id: data.transactionId },
+    return runInteractiveTransaction(async (tx) => {
+      const transaction = await tx.transaction.findUnique({
+        where: { id: data.transactionId },
+        include: { items: true },
+      });
+      if (!transaction) throw new Error('Transaction not found');
+      if (transaction.status === 'REFUNDED') throw new Error('Transaction has already been refunded');
+      if (transaction.status !== 'COMPLETED') throw new Error('Only completed transactions can be refunded');
+
+      const totalAmount = transaction.totalAmount.toNumber();
+      if (data.refundAmount > totalAmount) {
+        throw new Error('Refund amount cannot exceed transaction amount');
+      }
+
+      const isFullRefund = data.refundAmount >= totalAmount;
+
+      // Mark transaction as REFUNDED for full refunds
+      if (isFullRefund) {
+        await tx.transaction.update({
+          where: { id: data.transactionId },
+          data: { status: 'REFUNDED' },
+        });
+
+        // Restore inventory for all items
+        for (const item of transaction.items) {
+          await createInventoryTransaction({
+            productId: item.productId,
+            transactionType: 'RETURN',
+            quantity: item.quantity,
+            referenceId: transaction.id,
+            notes: `POS refund: ${data.reason}`,
+          }, tx as any);
+        }
+      }
+
+      return {
+        id: `refund-${Date.now()}`,
+        transactionId: data.transactionId,
+        originalAmount: totalAmount,
+        refundAmount: data.refundAmount,
+        reason: data.reason,
+        status: isFullRefund ? ('APPROVED' as RefundStatus) : ('PENDING' as RefundStatus),
+        requestedAt: new Date(),
+        notes: data.notes,
+        paymentMethod: transaction.paymentMethod as any,
+      };
     });
-
-    // Validate refund amount doesn't exceed transaction amount
-    if (data.refundAmount > transaction.totalAmount.toNumber()) {
-      throw new Error('Refund amount cannot exceed transaction amount');
-    }
-
-    // In a real system, this would be saved to database
-    return {
-      id: `refund-${Date.now()}`,
-      transactionId: data.transactionId,
-      originalAmount: transaction.totalAmount.toNumber(),
-      refundAmount: data.refundAmount,
-      reason: data.reason,
-      status: 'PENDING' as RefundStatus,
-      requestedAt: new Date(),
-      notes: data.notes,
-      paymentMethod: transaction.paymentMethod as any,
-    };
   }
 
   /**

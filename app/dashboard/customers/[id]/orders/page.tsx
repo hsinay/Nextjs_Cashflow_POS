@@ -7,12 +7,15 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/currency';
 import { RotateCcw } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
-export default function CustomerOrdersPage({ params, searchParams }: { params: { id: string }, searchParams?: Record<string, string> }) {
-  const page = Number(searchParams?.page || 1);
-  const limit = Number(searchParams?.limit || 20);
-  const status = searchParams?.status || 'ALL';
+export default function CustomerOrdersPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const searchParams = useSearchParams();
+  const page = Number(searchParams.get('page') || 1);
+  const limit = Number(searchParams.get('limit') || 20);
+  const status = searchParams.get('status') || 'ALL';
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
@@ -21,7 +24,7 @@ export default function CustomerOrdersPage({ params, searchParams }: { params: {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch(`/api/customers/${params.id}/orders?status=${status}&page=${page}&limit=${limit}`);
+      const res = await fetch(`/api/customers/${id}/orders?status=${status}&page=${page}&limit=${limit}`);
       const data = await res.json();
       setOrders(data.data?.orders || []);
     } catch (error) {
@@ -53,7 +56,7 @@ export default function CustomerOrdersPage({ params, searchParams }: { params: {
 
   useEffect(() => {
     fetchOrders();
-  }, [params.id, status, page, limit]);
+  }, [id, status, page, limit]);
 
   const formatDate = (dateString: any) => {
     try {
@@ -267,7 +270,7 @@ export default function CustomerOrdersPage({ params, searchParams }: { params: {
 
       {/* Back Button */}
       <div>
-        <Link href={`/dashboard/customers/${params.id}`}>
+        <Link href={`/dashboard/customers/${id}`}>
           <Button variant="outline">Back to Customer</Button>
         </Link>
       </div>

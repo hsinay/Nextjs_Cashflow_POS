@@ -164,76 +164,68 @@ export async function getPurchaseOrderById(id: string): Promise<PurchaseOrder | 
 export async function createPurchaseOrder(data: CreatePurchaseOrderInput): Promise<PurchaseOrder> {
   const { supplierId, orderDate, status, items } = data;
 
-  const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
-  if (!supplier) {
-    throw new Error('Supplier not found');
-  }
+  const purchaseOrderId = await runInteractiveTransaction(async (tx) => {
+    const supplier = await tx.supplier.findUnique({ where: { id: supplierId } });
+    if (!supplier) {
+      throw new Error('Supplier not found');
+    }
 
-  let totalAmount = new Prisma.Decimal(0);
-  const orderItemsData = await Promise.all(
-    items.map(async (item) => {
-      const product = await prisma.product.findUnique({ where: { id: item.productId } });
-      if (!product) {
-        throw new Error(`Product with id ${item.productId} not found`);
-      }
+    let totalAmount = new Prisma.Decimal(0);
+    const orderItemsData = await Promise.all(
+      items.map(async (item) => {
+        const product = await tx.product.findUnique({ where: { id: item.productId } });
+        if (!product) {
+          throw new Error(`Product with id ${item.productId} not found`);
+        }
 
-      const unitPrice = new Prisma.Decimal(item.unitPrice || decimalToNumber(product.costPrice) || 0);
-      const quantity = new Prisma.Decimal(item.quantity);
-      const discount = new Prisma.Decimal(item.discount || 0);
-      
-      const subtotal = unitPrice.times(quantity).minus(discount);
-      totalAmount = totalAmount.plus(subtotal);
+        const unitPrice = new Prisma.Decimal(item.unitPrice || decimalToNumber(product.costPrice) || 0);
+        const quantity = new Prisma.Decimal(item.quantity);
+        const discount = new Prisma.Decimal(item.discount || 0);
+        const subtotal = unitPrice.times(quantity).minus(discount);
+        totalAmount = totalAmount.plus(subtotal);
 
-      return {
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice: unitPrice,
-        discount: discount,
-        subtotal: subtotal,
-        taxAmount: new Prisma.Decimal(0),
-      };
-    })
-  );
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: unitPrice,
+          discount: discount,
+          subtotal: subtotal,
+          taxAmount: new Prisma.Decimal(0),
+        };
+      })
+    );
 
-  const purchaseOrder = await prisma.purchaseOrder.create({
-    data: {
-      supplier: { connect: { id: supplierId } },
-      orderDate: orderDate || new Date(),
-      status: status || 'DRAFT',
-      totalAmount: totalAmount,
-      paidAmount: new Prisma.Decimal(0),
-      paymentStatus: 'PENDING',
-      balanceAmount: totalAmount,
-      items: {
-        create: orderItemsData,
-      },
-    },
-    include: {
-      supplier: true,
-      items: {
-        include: {
-          product: true,
+    const purchaseOrder = await tx.purchaseOrder.create({
+      data: {
+        supplier: { connect: { id: supplierId } },
+        orderDate: orderDate || new Date(),
+        status: status || 'DRAFT',
+        totalAmount: totalAmount,
+        paidAmount: new Prisma.Decimal(0),
+        paymentStatus: 'PENDING',
+        balanceAmount: totalAmount,
+        items: {
+          create: orderItemsData,
         },
       },
-    },
-  });
+    });
 
-  // NOTE: Stock is NOT incremented here. Inventory moves only when goods are
-  // physically received via GRN (createInventoryTransaction is called there).
-  // Creating an audit record without stock impact uses ADJUSTMENT, but since
-  // PO creation is purely a commitment document we skip it entirely.
+    // NOTE: Stock is NOT incremented here — inventory moves only when goods are
+    // physically received via GRN.
 
-  // Create Ledger Entry for Purchase Order
-  await createLedgerEntry({
+    await createLedgerEntry({
       entryDate: purchaseOrder.createdAt,
-      description: `Purchase Order #${purchaseOrder.id.substring(0,8)} from ${supplier.name}`,
-      debitAccount: 'Inventory', // Or Purchase Clearing
+      description: `Purchase Order #${purchaseOrder.id.substring(0, 8)} from ${supplier.name}`,
+      debitAccount: 'Inventory',
       creditAccount: 'Accounts Payable',
       amount: decimalToNumber(purchaseOrder.totalAmount),
       referenceId: purchaseOrder.id,
+    }, tx as any);
+
+    return purchaseOrder.id;
   });
-  
-  return getPurchaseOrderById(purchaseOrder.id).then(order => order!);
+
+  return getPurchaseOrderById(purchaseOrderId).then(order => order!);
 }
 
 export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderInput): Promise<PurchaseOrder> {

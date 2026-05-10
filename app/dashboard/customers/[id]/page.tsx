@@ -10,8 +10,9 @@ import { CustomerService } from '@/services/customer.service';
 import { CustomerSegment } from '@/types/customer.types';
 import Link from 'next/link';
 
-export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
-  const customer = await CustomerService.getCustomerById(params.id);
+export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const customer = await CustomerService.getCustomerById(id);
   if (!customer) return <div>Customer not found.</div>;
   const { outstandingBalance, creditLimit, loyaltyPoints, aiSegment, churnRiskScore, recentOrders } = customer;
 

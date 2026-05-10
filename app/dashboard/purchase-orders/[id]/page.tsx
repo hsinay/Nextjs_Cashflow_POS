@@ -12,9 +12,9 @@ import { getServerSession } from 'next-auth';
 import { notFound, redirect } from 'next/navigation';
 
 interface PurchaseOrderPageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 export default async function PurchaseOrderPage({ params }: PurchaseOrderPageProps) {
@@ -23,14 +23,15 @@ export default async function PurchaseOrderPage({ params }: PurchaseOrderPagePro
         redirect('/login');
     }
 
-    const order = await getPurchaseOrderById(params.id);
+    const { id } = await params;
+    const order = await getPurchaseOrderById(id);
 
     if (!order) {
         notFound();
     }
 
     // Fetch linked payments
-    const payments = await getPurchaseOrderPayments(params.id);
+    const payments = await getPurchaseOrderPayments(id);
 
     return (
         <div className="space-y-8">
@@ -116,7 +117,7 @@ export default async function PurchaseOrderPage({ params }: PurchaseOrderPagePro
 
             {/* Payment Tracking Section - Client Component */}
             <PurchaseOrderDetailsClient 
-                purchaseOrderId={params.id}
+                purchaseOrderId={id}
                 totalAmount={order.totalAmount}
                 paidAmount={order.paidAmount}
                 initialPayments={payments}

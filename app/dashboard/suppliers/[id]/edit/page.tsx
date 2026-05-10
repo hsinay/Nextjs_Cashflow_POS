@@ -5,9 +5,10 @@
 import { SupplierForm } from '@/components/suppliers/supplier-form';
 import { CreateSupplierInput } from '@/types/supplier.types';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 
-export default function EditSupplierPage({ params }: { params: { id: string } }) {
+export default function EditSupplierPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [supplier, setSupplier] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,7 +18,7 @@ export default function EditSupplierPage({ params }: { params: { id: string } })
   useEffect(() => {
     const fetchSupplier = async () => {
       try {
-        const res = await fetch(`/api/suppliers/${params.id}`);
+        const res = await fetch(`/api/suppliers/${id}`);
         if (!res.ok) throw new Error('Failed to fetch supplier');
         const data = await res.json();
         setSupplier(data.data);
@@ -29,14 +30,14 @@ export default function EditSupplierPage({ params }: { params: { id: string } })
     };
 
     fetchSupplier();
-  }, [params.id]);
+  }, [id]);
 
   const onSubmit = async (data: CreateSupplierInput) => {
     setIsSaving(true);
     setError('');
 
     try {
-      const res = await fetch(`/api/suppliers/${params.id}`, {
+      const res = await fetch(`/api/suppliers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -48,7 +49,7 @@ export default function EditSupplierPage({ params }: { params: { id: string } })
         return;
       }
 
-      router.push(`/dashboard/suppliers/${params.id}`);
+      router.push(`/dashboard/suppliers/${id}`);
     } catch (err) {
       setError('An error occurred while updating the supplier');
     } finally {

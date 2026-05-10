@@ -51,13 +51,14 @@ const statusBadgeColors: Record<string, string> = {
     FAILED: 'bg-red-100 text-red-800',
 };
 
-export default async function PaymentDetailsPage({ params }: { params: { id: string } }) {
+export default async function PaymentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
         redirect('/login');
     }
 
-    const payment = await getPaymentById(params.id);
+    const { id } = await params;
+    const payment = await getPaymentById(id);
     if (!payment) {
         return (
             <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">

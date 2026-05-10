@@ -8,7 +8,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
 interface POSSessionsPageProps {
-  searchParams: {
+  searchParams: Promise<{
     cashierId?: string;
     status?: string;
     startDate?: string;
@@ -17,7 +17,7 @@ interface POSSessionsPageProps {
     limit?: string;
     sortField?: string;
     sortDir?: string;
-  };
+  }>;
 }
 
 export default async function POSSessionsPage({ searchParams }: POSSessionsPageProps) {
@@ -27,19 +27,20 @@ export default async function POSSessionsPage({ searchParams }: POSSessionsPageP
     redirect('/login');
   }
 
+  const sp = await searchParams;
   const filters = {
-    cashierId: searchParams.cashierId,
-    status: searchParams.status,
-    startDate: searchParams.startDate ? new Date(searchParams.startDate) : undefined,
-    endDate: searchParams.endDate ? new Date(searchParams.endDate) : undefined,
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit) : 20,
-    sortField: searchParams.sortField,
-    sortDir: searchParams.sortDir as 'asc' | 'desc' | undefined,
-  }
+    cashierId: sp.cashierId,
+    status: sp.status,
+    startDate: sp.startDate ? new Date(sp.startDate) : undefined,
+    endDate: sp.endDate ? new Date(sp.endDate) : undefined,
+    page: sp.page ? parseInt(sp.page) : 1,
+    limit: sp.limit ? parseInt(sp.limit) : 20,
+    sortField: sp.sortField,
+    sortDir: sp.sortDir as 'asc' | 'desc' | undefined,
+  };
 
   const { sessions, pagination } = await getAllPOSSessions(filters);
-  const users = await prisma.user.findMany({ orderBy: { username: 'asc' }}); // Assuming all users can be cashiers
+  const users = await prisma.user.findMany({ orderBy: { username: 'asc' } });
 
   return (
     <div className="space-y-6">
@@ -53,10 +54,10 @@ export default async function POSSessionsPage({ searchParams }: POSSessionsPageP
       </div>
 
       <POSSessionListClient
-        initialCashierId={searchParams.cashierId || ''}
-        initialStatus={searchParams.status || ''}
-        initialStartDate={searchParams.startDate || ''}
-        initialEndDate={searchParams.endDate || ''}
+        initialCashierId={sp.cashierId || ''}
+        initialStatus={sp.status || ''}
+        initialStartDate={sp.startDate || ''}
+        initialEndDate={sp.endDate || ''}
         users={users}
         sessions={sessions}
         pagination={pagination}

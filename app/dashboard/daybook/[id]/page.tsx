@@ -10,7 +10,7 @@ import { DayBookSummary } from '@/components/daybook/daybook-summary';
 import { EntriesList } from '@/components/daybook/entries-list';
 
 interface DayBookPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function DayBookPage({ params }: DayBookPageProps) {
@@ -20,7 +20,8 @@ export default async function DayBookPage({ params }: DayBookPageProps) {
     redirect('/login');
   }
 
-  const daybook = await daybookService.getDayBook(params.id);
+  const { id } = await params;
+  const daybook = await daybookService.getDayBook(id);
 
   if (!daybook) {
     return (

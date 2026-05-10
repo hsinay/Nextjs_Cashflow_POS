@@ -10,9 +10,9 @@ import { getServerSession } from 'next-auth';
 import { notFound, redirect } from 'next/navigation';
 
 interface EditPurchaseOrderPageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 async function getInitialData(orderId: string) {
@@ -50,7 +50,8 @@ export default async function EditPurchaseOrderPage({ params }: EditPurchaseOrde
         redirect('/login');
     }
 
-    const { order, convertedSuppliers, convertedProducts } = await getInitialData(params.id);
+    const { id } = await params;
+    const { order, convertedSuppliers, convertedProducts } = await getInitialData(id);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

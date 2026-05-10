@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export default async function PhysicalInventoryDetailPage({ params }: PageProps) {
@@ -36,17 +36,18 @@ export default async function PhysicalInventoryDetailPage({ params }: PageProps)
     redirect('/dashboard');
   }
 
+  const { id } = await params;
   let pi = null;
   let lines: any[] = [];
   let error: string | null = null;
 
   try {
-    pi = await getPhysicalInventory(params.id);
+    pi = await getPhysicalInventory(id);
     if (!pi) {
       redirect('/dashboard/inventory/physical-inventory');
     }
 
-    const result = await getCountLines(params.id, {
+    const result = await getCountLines(id, {
       page: 1,
       limit: 100,
     });

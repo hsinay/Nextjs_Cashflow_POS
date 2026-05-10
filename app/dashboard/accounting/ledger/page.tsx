@@ -6,17 +6,19 @@ import { getAllLedgerEntries } from '@/services/ledger.service';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
+interface LedgerSearchParams {
+  startDate?: string;
+  endDate?: string;
+  account?: string;
+  referenceId?: string;
+  page?: string;
+  limit?: string;
+  sortField?: string;
+  sortDir?: string;
+}
+
 interface LedgerPageProps {
-  searchParams: {
-    startDate?: string;
-    endDate?: string;
-    account?: string;
-    referenceId?: string;
-    page?: string;
-    limit?: string;
-    sortField?: string;
-    sortDir?: string;
-  };
+  searchParams: Promise<LedgerSearchParams>;
 }
 
 export default async function LedgerPage({ searchParams }: LedgerPageProps) {
@@ -26,20 +28,20 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
     redirect('/login');
   }
 
+  const sp = await searchParams;
   const filters = {
-    startDate: searchParams.startDate ? new Date(searchParams.startDate) : undefined,
-    endDate: searchParams.endDate ? new Date(searchParams.endDate) : undefined,
-    account: searchParams.account,
-    referenceId: searchParams.referenceId,
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit) : 20,
-    sortField: searchParams.sortField,
-    sortDir: searchParams.sortDir as 'asc' | 'desc' | undefined,
-  }
+    startDate: sp.startDate ? new Date(sp.startDate) : undefined,
+    endDate: sp.endDate ? new Date(sp.endDate) : undefined,
+    account: sp.account,
+    referenceId: sp.referenceId,
+    page: sp.page ? parseInt(sp.page) : 1,
+    limit: sp.limit ? parseInt(sp.limit) : 20,
+    sortField: sp.sortField,
+    sortDir: sp.sortDir as 'asc' | 'desc' | undefined,
+  };
 
   const { entries, pagination } = await getAllLedgerEntries(filters);
 
-  // TODO: Fetch distinct accounts for filtering dropdown
   const accounts: string[] = ["Cash", "Bank", "Accounts Receivable", "Accounts Payable", "Sales Revenue", "Sales Tax Payable", "Sales Discount", "Inventory", "Purchase Clearing"];
 
   return (
@@ -54,10 +56,10 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
       </div>
 
       <LedgerEntryListClient
-        initialStartDate={searchParams.startDate || ''}
-        initialEndDate={searchParams.endDate || ''}
-        initialAccount={searchParams.account || ''}
-        initialReferenceId={searchParams.referenceId || ''}
+        initialStartDate={sp.startDate || ''}
+        initialEndDate={sp.endDate || ''}
+        initialAccount={sp.account || ''}
+        initialReferenceId={sp.referenceId || ''}
         accounts={accounts}
         entries={entries}
         pagination={pagination}

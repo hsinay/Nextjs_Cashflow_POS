@@ -8,9 +8,9 @@ import { getServerSession } from 'next-auth';
 import { notFound, redirect } from 'next/navigation';
 
 interface EditSalesOrderPageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 async function getInitialData(orderId: string) {
@@ -48,7 +48,8 @@ export default async function EditSalesOrderPage({ params }: EditSalesOrderPageP
         redirect('/login');
     }
 
-    const { order, convertedCustomers, convertedProducts } = await getInitialData(params.id);
+    const { id } = await params;
+    const { order, convertedCustomers, convertedProducts } = await getInitialData(id);
 
     return (
         <div className="space-y-6">

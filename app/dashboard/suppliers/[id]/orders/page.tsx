@@ -6,24 +6,26 @@ import { SupplierService } from '@/services/supplier.service';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-export default async function SupplierOrdersPage({ 
-  params, 
-  searchParams 
-}: { 
-  params: { id: string }; 
-  searchParams?: Record<string, string>;
+export default async function SupplierOrdersPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string>>;
 }) {
-  const supplier = await SupplierService.getSupplierById(params.id);
+  const { id } = await params;
+  const resolvedSearchParams = await searchParams;
+  const supplier = await SupplierService.getSupplierById(id);
 
   if (!supplier) {
     notFound();
   }
 
-  const page = Number(searchParams?.page || 1);
-  const limit = Number(searchParams?.limit || 20);
-  const status = searchParams?.status;
+  const page = Number(resolvedSearchParams?.page || 1);
+  const limit = Number(resolvedSearchParams?.limit || 20);
+  const status = resolvedSearchParams?.status;
 
-  const { orders, pagination } = await SupplierService.getSupplierOrders(params.id, {
+  const { orders, pagination } = await SupplierService.getSupplierOrders(id, {
     status,
     page,
     limit,
@@ -124,7 +126,7 @@ export default async function SupplierOrdersPage({
 
       {/* Back Button */}
       <div className="flex items-center gap-3">
-        <Link href={`/dashboard/suppliers/${params.id}`}>
+        <Link href={`/dashboard/suppliers/${id}`}>
           <Button variant="outline">Back to Supplier</Button>
         </Link>
       </div>

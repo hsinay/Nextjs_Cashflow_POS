@@ -303,6 +303,22 @@ export async function generateSupplierStatement(
 
   const lastPayment = paymentsInPeriod[paymentsInPeriod.length - 1];
 
+  // Compute days overdue: days since the oldest unpaid PO's order date (if any balance remains)
+  let daysOverdue = 0;
+  if (runningBalance > 0) {
+    const oldestUnpaidPO = await prisma.purchaseOrder.findFirst({
+      where: { supplierId, balanceAmount: { gt: 0 } },
+      orderBy: { orderDate: 'asc' },
+      select: { orderDate: true },
+    });
+    if (oldestUnpaidPO) {
+      daysOverdue = Math.max(
+        0,
+        Math.floor((new Date().getTime() - oldestUnpaidPO.orderDate.getTime()) / (1000 * 60 * 60 * 24))
+      );
+    }
+  }
+
   return {
     supplierId,
     supplierName: supplier.name,
@@ -315,10 +331,7 @@ export async function generateSupplierStatement(
     summary: {
       totalDebit,
       totalCredit,
-      daysOverdue: Math.max(
-        0,
-        Math.floor((new Date().getTime() - periodEnd.getTime()) / (1000 * 60 * 60 * 24))
-      ),
+      daysOverdue,
       lastPaymentDate: lastPayment?.paymentDate,
     },
   };

@@ -162,7 +162,7 @@ export async function getGRNById(grnId: string, tx?: typeof prisma): Promise<GRN
   return {
     id: grn.id,
     purchaseOrderId: grn.purchaseOrderId,
-    grnNumber: '',
+    grnNumber: `GRN-${grn.id.substring(0, 8).toUpperCase()}`,
     grnDate: grn.receivedDate,
     status: grn.status as GRNRecord['status'],
     totalQuantityReceived: grn.items.reduce((sum: number, i: { quantityReceived: number }) => sum + i.quantityReceived, 0),

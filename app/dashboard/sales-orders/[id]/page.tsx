@@ -10,9 +10,9 @@ import { getServerSession } from 'next-auth';
 import { notFound, redirect } from 'next/navigation';
 
 interface SalesOrderPageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 export default async function SalesOrderPage({ params }: SalesOrderPageProps) {
@@ -21,7 +21,8 @@ export default async function SalesOrderPage({ params }: SalesOrderPageProps) {
         redirect('/login');
     }
 
-    const order = await getSalesOrderById(params.id);
+    const { id } = await params;
+    const order = await getSalesOrderById(id);
 
     if (!order) {
         notFound();

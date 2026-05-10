@@ -4,37 +4,38 @@
 import { CustomerForm } from '@/components/customers/customer-form';
 import { updateCustomerSchema } from '@/lib/validations/customer.schema';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 
-export default function EditCustomerPage({ params }: { params: { id: string } }) {
+export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [customer, setCustomer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/customers/${params.id}`)
+    fetch(`/api/customers/${id}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setCustomer(data.data);
         else setError(data.error);
         setLoading(false);
       });
-  }, [params.id]);
+  }, [id]);
 
   const handleSubmit = async (data: any) => {
     setLoading(true);
     setError(null);
     try {
       updateCustomerSchema.parse(data);
-      const res = await fetch(`/api/customers/${params.id}`, {
+      const res = await fetch(`/api/customers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
       const result = await res.json();
       if (!result.success) throw new Error(result.error);
-      router.push(`/dashboard/customers/${params.id}`);
+      router.push(`/dashboard/customers/${id}`);
     } catch (err: any) {
       setError(err.message);
     } finally {

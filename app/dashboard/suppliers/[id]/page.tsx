@@ -7,8 +7,9 @@ import { SupplierService } from '@/services/supplier.service';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-export default async function SupplierDetailPage({ params }: { params: { id: string } }) {
-  const supplier = await SupplierService.getSupplierById(params.id);
+export default async function SupplierDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supplier = await SupplierService.getSupplierById(id);
 
   if (!supplier) {
     notFound();

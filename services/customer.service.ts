@@ -192,19 +192,18 @@ export const CustomerService = {
     return convertToNumber(customers);
   },
   async getCreditIssueCustomers() {
-    const customers = await prisma.customer.findMany({ where: { isActive: true } });
-    // Parallelize balance calculation instead of serial for loop
-    const customersWithBalance = await Promise.all(
-      customers.map(async (c) => ({
-        customer: c,
-        outstanding: await CustomerService.calculateOutstandingBalance(c.id),
-      }))
+    // Single grouped aggregation instead of N+1 per-customer queries
+    const balancesByCustomer = await prisma.salesOrder.groupBy({
+      by: ['customerId'],
+      where: { status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] } },
+      _sum: { balanceAmount: true },
+    });
+    const balanceMap = new Map(
+      balancesByCustomer.map(b => [b.customerId, Number(b._sum.balanceAmount ?? 0)])
     );
-    // Filter and return only those with credit issues
+    const customers = await prisma.customer.findMany({ where: { isActive: true } });
     return convertToNumber(
-      customersWithBalance
-        .filter(cb => cb.outstanding >= Number(cb.customer.creditLimit))
-        .map(cb => cb.customer)
+      customers.filter(c => (balanceMap.get(c.id) ?? 0) >= Number(c.creditLimit))
     );
   },
   async getCustomerBalance(id: string) {

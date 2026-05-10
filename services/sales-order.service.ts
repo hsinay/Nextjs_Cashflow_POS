@@ -173,89 +173,79 @@ export async function getSalesOrderById(id: string): Promise<SalesOrder | null> 
 export async function createSalesOrder(data: CreateSalesOrderInput): Promise<SalesOrder> {
   const { customerId, orderDate, status, items } = data;
 
-  // 1. Validate customer
-  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-  if (!customer) {
-    throw new Error('Customer not found');
-  }
+  const salesOrderId = await runInteractiveTransaction(async (tx) => {
+    // 1. Validate customer
+    const customer = await tx.customer.findUnique({ where: { id: customerId } });
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
 
-  // 2. Process order items and calculate totals
-  let totalAmount = new Prisma.Decimal(0);
-  const orderItemsData = await Promise.all(
-    items.map(async (item) => {
-      const product = await prisma.product.findUnique({ where: { id: item.productId } });
-      if (!product) {
-        throw new Error(`Product with id ${item.productId} not found`);
-      }
-      if (product.stockQuantity < item.quantity) {
-        throw new Error(`Not enough stock for product ${product.name}`);
-      }
+    // 2. Process order items and calculate totals
+    let totalAmount = new Prisma.Decimal(0);
+    const orderItemsData = await Promise.all(
+      items.map(async (item) => {
+        const product = await tx.product.findUnique({ where: { id: item.productId } });
+        if (!product) {
+          throw new Error(`Product with id ${item.productId} not found`);
+        }
 
-      const unitPrice = new Prisma.Decimal(item.unitPrice || decimalToNumber(product.price));
-      const quantity = new Prisma.Decimal(item.quantity);
-      const discount = new Prisma.Decimal(item.discount || 0);
-      
-      const subtotal = unitPrice.times(quantity).minus(discount);
-      totalAmount = totalAmount.plus(subtotal);
+        const unitPrice = new Prisma.Decimal(item.unitPrice || decimalToNumber(product.price));
+        const quantity = new Prisma.Decimal(item.quantity);
+        const discount = new Prisma.Decimal(item.discount || 0);
+        const subtotal = unitPrice.times(quantity).minus(discount);
+        totalAmount = totalAmount.plus(subtotal);
 
-      return {
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice: unitPrice,
-        discount: discount,
-        subtotal: subtotal,
-        taxAmount: new Prisma.Decimal(0), // TODO: Implement tax calculation
-      };
-    })
-  );
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: unitPrice,
+          discount: discount,
+          subtotal: subtotal,
+          taxAmount: new Prisma.Decimal(0),
+        };
+      })
+    );
 
-  // 3. Create SalesOrder and SalesOrderItems in a transaction
-  const salesOrder = await prisma.salesOrder.create({
-    data: {
-      customer: { connect: { id: customerId } },
-      orderDate: orderDate || new Date(),
-      status: status || 'DRAFT',
-      totalAmount: totalAmount,
-      paidAmount: new Prisma.Decimal(0),
-      paymentStatus: 'UNPAID',
-      balanceAmount: totalAmount, // Initially, balance is the total amount
-      items: {
-        create: orderItemsData,
-      },
-    },
-    include: {
-      customer: true,
-      items: {
-        include: {
-          product: true,
+    // 3. Create SalesOrder and SalesOrderItems
+    const salesOrder = await tx.salesOrder.create({
+      data: {
+        customer: { connect: { id: customerId } },
+        orderDate: orderDate || new Date(),
+        status: status || 'DRAFT',
+        totalAmount: totalAmount,
+        paidAmount: new Prisma.Decimal(0),
+        paymentStatus: 'UNPAID',
+        balanceAmount: totalAmount,
+        items: {
+          create: orderItemsData,
         },
       },
-    },
-  });
+    });
 
-  // 4. Create inventory transactions — createInventoryTransaction handles stock decrement
-  await Promise.all(
-    items.map((item) =>
-      createInventoryTransaction({
+    // 4. Create inventory transactions inside the same transaction
+    for (const item of items) {
+      await createInventoryTransaction({
         productId: item.productId,
         transactionType: 'SALE',
         quantity: item.quantity,
         referenceId: salesOrder.id,
-      })
-    )
-  );
+      }, tx as any);
+    }
 
-  // 5. Create Ledger Entry for Sales Order
-  await createLedgerEntry({
+    // 5. Create Ledger Entry
+    await createLedgerEntry({
       entryDate: salesOrder.createdAt,
-      description: `Sales Order #${salesOrder.id.substring(0,8)} from ${customer.name}`,
+      description: `Sales Order #${salesOrder.id.substring(0, 8)} from ${customer.name}`,
       debitAccount: 'Accounts Receivable',
       creditAccount: 'Sales Revenue',
       amount: decimalToNumber(salesOrder.totalAmount),
       referenceId: salesOrder.id,
+    }, tx as any);
+
+    return salesOrder.id;
   });
-  
-  return getSalesOrderById(salesOrder.id).then(order => order!);
+
+  return getSalesOrderById(salesOrderId).then(order => order!);
 }
 
 
