@@ -218,18 +218,10 @@ export async function createPurchaseOrder(data: CreatePurchaseOrderInput): Promi
     },
   });
 
-  // Create inventory transactions for purchase order items
-  await Promise.all(
-    items.map(async (item) => {
-      await createInventoryTransaction({
-        productId: item.productId,
-        transactionType: 'PURCHASE',
-        quantity: item.quantity,
-        referenceId: purchaseOrder.id,
-        notes: `Purchase Order ${purchaseOrder.id} item expected`,
-      });
-    })
-  );
+  // NOTE: Stock is NOT incremented here. Inventory moves only when goods are
+  // physically received via GRN (createInventoryTransaction is called there).
+  // Creating an audit record without stock impact uses ADJUSTMENT, but since
+  // PO creation is purely a commitment document we skip it entirely.
 
   // Create Ledger Entry for Purchase Order
   await createLedgerEntry({
@@ -265,17 +257,17 @@ export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderI
               await tx.purchaseOrderItem.deleteMany({
                   where: { id: { in: items.delete } },
               });
-              // Create adjustment for removed items
+              // Audit records for removed PO items (no stock impact since PO creation doesn't move stock)
               for (const itemId of items.delete) {
                   const item = existingOrder.items.find(i => i.id === itemId);
                   if (item) {
                       await createInventoryTransaction({
                           productId: item.productId,
                           transactionType: 'ADJUSTMENT',
-                          quantity: -item.quantity, // Negative quantity for removal
+                          quantity: -item.quantity,
                           referenceId: existingOrder.id,
                           notes: `Item removed from Purchase Order ${existingOrder.id}`,
-                      });
+                      }, tx as any);
                   }
               }
           }
@@ -312,7 +304,7 @@ export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderI
                           quantity: quantityDiff,
                           referenceId: existingOrder.id,
                           notes: `Quantity updated in Purchase Order ${existingOrder.id}`,
-                      });
+                      }, tx as any);
                   }
               }
           }
@@ -339,13 +331,14 @@ export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderI
                       },
                   });
 
+                  // Audit record only — stock moves on GRN receipt, not on PO edit
                   await createInventoryTransaction({
                       productId: itemData.productId,
-                      transactionType: 'PURCHASE',
+                      transactionType: 'ADJUSTMENT',
                       quantity: quantity,
                       referenceId: id,
                       notes: `New item added to Purchase Order ${id}`,
-                  });
+                  }, tx as any);
               }
           }
       }
@@ -383,39 +376,39 @@ export async function updatePurchaseOrder(id: string, data: UpdatePurchaseOrderI
 }
 
 export async function deletePurchaseOrder(id: string): Promise<void> {
-  const order = await prisma.purchaseOrder.findUnique({
-      where: { id },
-      include: { items: true },
+  await runInteractiveTransaction(async (tx) => {
+      const order = await tx.purchaseOrder.findUnique({
+          where: { id },
+          include: { items: true },
+      });
+
+      if (!order) {
+          throw new Error('Purchase order not found');
+      }
+
+      // Audit records for deleted PO items (no stock impact — stock only moves on GRN)
+      for (const item of order.items) {
+          await createInventoryTransaction({
+              productId: item.productId,
+              transactionType: 'ADJUSTMENT',
+              quantity: -item.quantity,
+              referenceId: order.id,
+              notes: `Items cancelled due to deleted Purchase Order ${order.id}`,
+          }, tx as any);
+      }
+
+      // Reverse Ledger Entry for Purchase Order
+      await createLedgerEntry({
+          entryDate: new Date(),
+          description: `Purchase Order #${order.id.substring(0,8)} deleted (reversal)`,
+          debitAccount: 'Accounts Payable',
+          creditAccount: 'Inventory',
+          amount: decimalToNumber(order.totalAmount),
+          referenceId: order.id,
+      }, tx);
+
+      await tx.purchaseOrder.delete({ where: { id } });
   });
-
-  if (!order) {
-      throw new Error('Purchase order not found');
-  }
-
-  // Create adjustment for items no longer expected
-  await Promise.all(
-    order.items.map(async (item) => {
-        await createInventoryTransaction({
-            productId: item.productId,
-            transactionType: 'ADJUSTMENT',
-            quantity: -item.quantity, // Negative quantity as they are no longer expected
-            referenceId: order.id,
-            notes: `Items no longer expected due to deleted Purchase Order ${order.id}`,
-        });
-    })
-  );
-
-  // Reverse Ledger Entry for Purchase Order
-  await createLedgerEntry({
-      entryDate: new Date(),
-      description: `Purchase Order #${order.id.substring(0,8)} deleted (reversal)`,
-      debitAccount: 'Accounts Payable',
-      creditAccount: 'Inventory', // Or Purchase Clearing
-      amount: decimalToNumber(order.totalAmount),
-      referenceId: order.id,
-  });
-
-  await prisma.purchaseOrder.delete({ where: { id } });
 }
 
 // ============================================

@@ -159,13 +159,8 @@ export function POSPaymentPanel({
         ...(selectedCustomer && { customerId: selectedCustomer.id }),
       };
 
-      // Execute payment confirmation
+      // Execute payment confirmation — parent handles success toast and cart clear
       await onConfirmPayment(paymentData);
-
-      toast({
-        title: 'Success',
-        description: `Payment of ${formatCurrency(recordedAmount)} processed successfully.`,
-      });
 
       onClose();
     } catch (error: unknown) {

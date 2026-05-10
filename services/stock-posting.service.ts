@@ -150,29 +150,36 @@ export async function getWarehouseStockSummary() {
       sku: true,
       stockQuantity: true,
       reorderLevel: true,
-      // unitPrice removed (not in schema)
+      costPrice: true,
+      price: true,
     },
   });
 
-  const summary = products.map((product) => ({
-    productId: product.id,
-    productName: product.name,
-    sku: product.sku,
-    quantity: product.stockQuantity,
-    reorderLevel: product.reorderLevel,
-    value: product.stockQuantity, // No unitPrice, so just use quantity
-    status:
-      product.stockQuantity === 0
-        ? 'OUT_OF_STOCK'
-        : product.reorderLevel !== null && product.stockQuantity <= product.reorderLevel
-          ? 'LOW_STOCK'
-          : 'IN_STOCK',
-  }));
+  const summary = products.map((product) => {
+    const unitValue = product.costPrice
+      ? parseFloat(product.costPrice.toString())
+      : parseFloat(product.price.toString());
+    const value = product.stockQuantity * unitValue;
+    return {
+      productId: product.id,
+      productName: product.name,
+      sku: product.sku,
+      quantity: product.stockQuantity,
+      reorderLevel: product.reorderLevel,
+      value,
+      status:
+        product.stockQuantity === 0
+          ? 'OUT_OF_STOCK'
+          : product.reorderLevel !== null && product.stockQuantity <= product.reorderLevel
+            ? 'LOW_STOCK'
+            : 'IN_STOCK',
+    };
+  });
 
   return {
     totalProducts: products.length,
     totalQuantity: products.reduce((sum, p) => sum + p.stockQuantity, 0),
-    totalValue: products.reduce((sum, p) => sum + p.stockQuantity, 0),
+    totalValue: summary.reduce((sum, s) => sum + s.value, 0),
     outOfStock: summary.filter((s) => s.status === 'OUT_OF_STOCK').length,
     lowStock: summary.filter((s) => s.status === 'LOW_STOCK').length,
     products: summary.sort((a, b) => b.value - a.value),
@@ -259,27 +266,30 @@ export async function calculateCOGS(startDate: Date, endDate: Date) {
         lte: endDate,
       },
       type: {
-        in: ['SALE', 'ADJUSTMENT'],
-      },
-      quantity: {
-        lt: 0,
+        in: ['SALE', 'POS_SALE'],
       },
     },
     include: {
-      product: true,
+      product: {
+        select: { name: true, costPrice: true, price: true },
+      },
     },
   });
 
   let totalCOGS = 0;
   const items = outTransactions.map((t) => {
-    const cost = Math.abs(t.quantity); // No unitPrice, so just use quantity
-    totalCOGS += cost;
+    const unitCost = t.product?.costPrice
+      ? parseFloat(t.product.costPrice.toString())
+      : parseFloat((t.product?.price ?? '0').toString());
+    const qty = Math.abs(t.quantity);
+    const totalCost = qty * unitCost;
+    totalCOGS += totalCost;
     return {
       productId: t.productId,
       productName: t.product?.name,
-      quantity: Math.abs(t.quantity),
-      unitCost: 0, // No unitPrice
-      totalCost: cost,
+      quantity: qty,
+      unitCost,
+      totalCost,
       type: t.type,
       date: t.createdAt,
     };

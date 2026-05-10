@@ -268,26 +268,26 @@ export async function updateProductStock(
 
     const difference = newQuantity - oldQuantity;
 
-    // Update product stock
-    const updatedProduct = await prisma.product.update({
-      where: { id: productId },
-      data: { stockQuantity: newQuantity },
-      include: {
-        category: {
-          select: { id: true, name: true },
+    // Update stock and create audit record atomically
+    const [updatedProduct] = await prisma.$transaction([
+      prisma.product.update({
+        where: { id: productId },
+        data: { stockQuantity: newQuantity },
+        include: {
+          category: {
+            select: { id: true, name: true },
+          },
         },
-      },
-    });
-
-    // Create inventory transaction for audit trail
-    await prisma.inventoryTransaction.create({
-      data: {
-        productId,
-        type: 'ADJUSTMENT',
-        quantity: difference,
-        notes: `Stock adjusted from ${oldQuantity} to ${newQuantity} units`,
-      },
-    });
+      }),
+      prisma.inventoryTransaction.create({
+        data: {
+          productId,
+          type: 'ADJUSTMENT',
+          quantity: difference,
+          notes: `Stock adjusted from ${oldQuantity} to ${newQuantity} units`,
+        },
+      }),
+    ]);
 
     return {
       id: updatedProduct.id,

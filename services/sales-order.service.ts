@@ -233,24 +233,16 @@ export async function createSalesOrder(data: CreateSalesOrderInput): Promise<Sal
     },
   });
 
-  // 4. Update product stock and create inventory transactions
+  // 4. Create inventory transactions — createInventoryTransaction handles stock decrement
   await Promise.all(
-    items.map(async (item) => {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: {
-          stockQuantity: {
-            decrement: item.quantity,
-          },
-        },
-      });
-      await createInventoryTransaction({
-          productId: item.productId,
-          transactionType: 'SALE',
-          quantity: item.quantity,
-          referenceId: salesOrder.id,
-      });
-    })
+    items.map((item) =>
+      createInventoryTransaction({
+        productId: item.productId,
+        transactionType: 'SALE',
+        quantity: item.quantity,
+        referenceId: salesOrder.id,
+      })
+    )
   );
 
   // 5. Create Ledger Entry for Sales Order
@@ -285,19 +277,15 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
                 throw new Error('Sales order not found');
             }
 
-            // Revert stock changes from the original order and create inventory adjustments
+            // Revert stock changes — use RETURN type so createInventoryTransaction handles the increment
             for (const item of existingOrder.items) {
-                await tx.product.update({
-                    where: { id: item.productId },
-                    data: { stockQuantity: { increment: item.quantity } },
-                });
                 await createInventoryTransaction({
                     productId: item.productId,
-                    transactionType: 'ADJUSTMENT',
+                    transactionType: 'RETURN',
                     quantity: item.quantity,
                     referenceId: existingOrder.id,
                     notes: `Stock restored from Sales Order ${existingOrder.id} update`,
-                });
+                }, tx as any);
             }
 
             const { items, ...orderData } = updateData;
@@ -336,16 +324,12 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
                         }
                     }));
 
-                    await tx.product.update({
-                        where: { id: existingItem.productId },
-                        data: { stockQuantity: { decrement: quantity } },
-                    });
                     await createInventoryTransaction({
                         productId: existingItem.productId,
                         transactionType: 'SALE',
                         quantity: quantity,
                         referenceId: existingOrder.id,
-                    });
+                    }, tx as any);
                 }
             }
 
@@ -372,16 +356,12 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
                         }
                     }));
 
-                    await tx.product.update({
-                        where: { id: item.productId },
-                        data: { stockQuantity: { decrement: quantity } },
-                    });
                     await createInventoryTransaction({
                         productId: item.productId,
                         transactionType: 'SALE',
                         quantity: quantity,
                         referenceId: existingOrder.id,
-                    });
+                    }, tx as any);
                 }
             }
         }
@@ -456,45 +436,37 @@ export async function updateSalesOrder(id: string, data: UpdateSalesOrderInput):
  * Delete sales order
  */
 export async function deleteSalesOrder(id: string): Promise<void> {
-    const order = await prisma.salesOrder.findUnique({
-        where: { id },
-        include: { items: true },
-    });
+    await runInteractiveTransaction(async (tx) => {
+        const order = await tx.salesOrder.findUnique({
+            where: { id },
+            include: { items: true },
+        });
 
-    if (!order) {
-        throw new Error('Sales order not found');
-    }
+        if (!order) {
+            throw new Error('Sales order not found');
+        }
 
-    // Restore stock and create inventory adjustments
-    await Promise.all(
-        order.items.map(async (item) => {
-            await prisma.product.update({
-                where: { id: item.productId },
-                data: {
-                    stockQuantity: {
-                        increment: item.quantity,
-                    },
-                },
-            });
+        // Restore stock — RETURN type increments stock in createInventoryTransaction
+        for (const item of order.items) {
             await createInventoryTransaction({
                 productId: item.productId,
-                transactionType: 'ADJUSTMENT', // or RETURN, depending on policy
+                transactionType: 'RETURN',
                 quantity: item.quantity,
                 referenceId: order.id,
                 notes: `Stock restored from deleted Sales Order ${order.id}`,
-            });
-        })
-    );
+            }, tx as any);
+        }
 
-    // Reverse Ledger Entry for Sales Order
-    await createLedgerEntry({
-        entryDate: new Date(),
-        description: `Sales Order #${order.id.substring(0,8)} deleted (reversal)`,
-        debitAccount: 'Sales Revenue',
-        creditAccount: 'Accounts Receivable',
-        amount: decimalToNumber(order.totalAmount),
-        referenceId: order.id,
+        // Reverse Ledger Entry for Sales Order
+        await createLedgerEntry({
+            entryDate: new Date(),
+            description: `Sales Order #${order.id.substring(0,8)} deleted (reversal)`,
+            debitAccount: 'Sales Revenue',
+            creditAccount: 'Accounts Receivable',
+            amount: decimalToNumber(order.totalAmount),
+            referenceId: order.id,
+        }, tx);
+
+        await tx.salesOrder.delete({ where: { id } });
     });
-
-    await prisma.salesOrder.delete({ where: { id } });
 }

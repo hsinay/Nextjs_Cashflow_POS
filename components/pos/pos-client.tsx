@@ -446,11 +446,12 @@ export function POSClient({ initialSession, products, categories, customers: _cu
 
         setIsCalculatingPrices(true);
         try {
-            // Get new price for updated quantity
+            const currentItem = cart.find(item => item.product.id === productId);
             const priceData = await calculatePrice(productId, quantity, selectedPricelist);
-            const newUnitPrice = (priceData?.calculatedPrice !== undefined && priceData.calculatedPrice !== null) 
-                ? priceData.calculatedPrice 
-                : 0;
+            // Fall back to the item's current price or the product base price — never 0
+            const newUnitPrice = (priceData?.calculatedPrice !== undefined && priceData.calculatedPrice !== null)
+                ? priceData.calculatedPrice
+                : (currentItem?.unitPrice ?? currentItem?.product.price ?? 0);
 
             const updatedCart = cart.map(item => {
                 if (item.product.id === productId) {
@@ -549,7 +550,8 @@ export function POSClient({ initialSession, products, categories, customers: _cu
             setSession(prev => prev ? { ...prev, totalSalesAmount: (prev.totalSalesAmount || 0) + totalAmount } : null);
             setIsPaymentPanelOpen(false);
         } catch (error: unknown) {
-            throw error;
+            const msg = error instanceof Error ? error.message : 'Failed to process transaction';
+            toast({ title: 'Payment Failed', description: msg, variant: 'destructive' });
         } finally {
             setIsProcessingPayment(false);
         }

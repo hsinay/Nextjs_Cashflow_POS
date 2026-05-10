@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/currency';
 import { authOptions } from '@/lib/auth';
 import { getPaymentById } from '@/services/payment.service';
 import {
@@ -75,9 +76,6 @@ export default async function PaymentDetailsPage({ params }: { params: { id: str
         );
     }
 
-    const formatCurrency = (amount: number) => {
-        return formatCurrency(amount);
-    };
 
     const formatDate = (date: Date) => {
         const d = new Date(date);
@@ -146,7 +144,7 @@ export default async function PaymentDetailsPage({ params }: { params: { id: str
                                 <div className="mt-4 space-y-2 text-sm">
                                     <div className="flex justify-between text-gray-600">
                                         <span>Gross Amount:</span>
-                                        <span>{formatCurrency(payment.amount + payment.transactionFee)}</span>
+                                        <span>{formatCurrency(payment.amount)}</span>
                                     </div>
                                     <div className="flex justify-between text-gray-600">
                                         <span>Transaction Fee:</span>

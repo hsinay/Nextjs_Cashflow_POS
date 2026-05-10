@@ -201,6 +201,7 @@ export async function getProfitAndLossStatement(startDate?: Date, endDate?: Date
         .reduce((sum, t) => sum + decimalToNumber(t.taxAmount), 0);
 
     const discountsGiven = transactions
+        .filter(t => t.status === 'COMPLETED')
         .reduce((sum, t) => sum + decimalToNumber(t.discountAmount), 0);
 
     const expenseWhere: Prisma.LedgerEntryWhereInput = {
@@ -233,46 +234,79 @@ export async function getProfitAndLossStatement(startDate?: Date, endDate?: Date
     };
 }
 
+// Account classification for double-entry bookkeeping.
+// Debit-normal: assets, expenses (debit increases balance).
+// Credit-normal: liabilities, equity, revenue (credit increases balance).
+const ASSET_ACCOUNTS = new Set([
+    'Cash', 'Bank', 'Accounts Receivable', 'Inventory',
+    'Prepaid Expenses', 'Inventory in Transit', 'Other Assets',
+]);
+const LIABILITY_ACCOUNTS = new Set([
+    'Accounts Payable', 'Goods Received Clearing',
+    'Taxes Payable', 'Other Liabilities',
+]);
+const EQUITY_ACCOUNTS = new Set([
+    'Sales Revenue', 'Owner Equity', 'Retained Earnings',
+]);
+const EXPENSE_ACCOUNTS = new Set([
+    'Refunds Expense', 'Cost of Goods Sold',
+]);
+
+function classifyAccount(name: string): 'asset' | 'liability' | 'equity' | 'expense' | 'unknown' {
+    if (ASSET_ACCOUNTS.has(name)) return 'asset';
+    if (LIABILITY_ACCOUNTS.has(name)) return 'liability';
+    if (EQUITY_ACCOUNTS.has(name)) return 'equity';
+    if (EXPENSE_ACCOUNTS.has(name)) return 'expense';
+    // Fallback: keyword matching for ad-hoc account names
+    const lower = name.toLowerCase();
+    if (lower.includes('cash') || lower.includes('bank') || lower.includes('receivable') || lower.includes('inventory')) return 'asset';
+    if (lower.includes('payable') || lower.includes('liability') || lower.includes('clearing')) return 'liability';
+    if (lower.includes('revenue') || lower.includes('equity') || lower.includes('retained')) return 'equity';
+    if (lower.includes('expense') || lower.includes('cogs') || lower.includes('cost')) return 'expense';
+    return 'unknown';
+}
+
 export async function getBalanceSheet(date?: Date): Promise<any> {
     const reportDate = date || new Date();
-    
-    // Get all ledger entries up to the report date
+
     const entries = await prisma.ledgerEntry.findMany({
-        where: {
-            entryDate: {
-                lte: reportDate,
-            },
-        },
+        where: { entryDate: { lte: reportDate } },
         orderBy: { entryDate: 'asc' },
     });
 
-    // Aggregate balances by account type
+    // Net balance per account: debit-normal accounts increase on debit, decrease on credit.
+    // Credit-normal accounts increase on credit, decrease on debit.
+    const balances: Record<string, number> = {};
+
+    entries.forEach(entry => {
+        const amount = decimalToNumber(entry.amount);
+        const debitType = classifyAccount(entry.debitAccount);
+        const creditType = classifyAccount(entry.creditAccount);
+
+        // Debit side: increases debit-normal (asset/expense), decreases credit-normal
+        if (debitType === 'asset' || debitType === 'expense') {
+            balances[entry.debitAccount] = (balances[entry.debitAccount] || 0) + amount;
+        } else {
+            balances[entry.debitAccount] = (balances[entry.debitAccount] || 0) - amount;
+        }
+
+        // Credit side: increases credit-normal (liability/equity/revenue), decreases debit-normal
+        if (creditType === 'liability' || creditType === 'equity') {
+            balances[entry.creditAccount] = (balances[entry.creditAccount] || 0) + amount;
+        } else {
+            balances[entry.creditAccount] = (balances[entry.creditAccount] || 0) - amount;
+        }
+    });
+
     const assets: Record<string, number> = {};
     const liabilities: Record<string, number> = {};
     const equity: Record<string, number> = {};
 
-    entries.forEach(entry => {
-        const amount = decimalToNumber(entry.amount);
-
-        // Simplified categorization based on account name
-        const debitAcc = entry.debitAccount.toLowerCase();
-        const creditAcc = entry.creditAccount.toLowerCase();
-
-        if (debitAcc.includes('asset')) {
-            assets[entry.debitAccount] = (assets[entry.debitAccount] || 0) + amount;
-        } else if (debitAcc.includes('liability')) {
-            liabilities[entry.debitAccount] = (liabilities[entry.debitAccount] || 0) - amount;
-        } else if (debitAcc.includes('equity')) {
-            equity[entry.debitAccount] = (equity[entry.debitAccount] || 0) + amount;
-        }
-
-        if (creditAcc.includes('asset')) {
-            assets[entry.creditAccount] = (assets[entry.creditAccount] || 0) - amount;
-        } else if (creditAcc.includes('liability')) {
-            liabilities[entry.creditAccount] = (liabilities[entry.creditAccount] || 0) + amount;
-        } else if (creditAcc.includes('equity')) {
-            equity[entry.creditAccount] = (equity[entry.creditAccount] || 0) - amount;
-        }
+    Object.entries(balances).forEach(([account, balance]) => {
+        const type = classifyAccount(account);
+        if (type === 'asset') assets[account] = balance;
+        else if (type === 'liability') liabilities[account] = balance;
+        else if (type === 'equity' || type === 'expense') equity[account] = balance;
     });
 
     const totalAssets = Object.values(assets).reduce((sum, val) => sum + val, 0);

@@ -316,8 +316,9 @@ export async function createTransaction(data: CreateTransactionInput): Promise<T
             ? rawRemainingCreditBalance
             : new Prisma.Decimal(0);
 
-        if (!isCreditSale && normalizedImmediatePaymentAmount.minus(totalAmount).abs().greaterThan(new Prisma.Decimal(0.01))) {
-            throw new BadRequestError('Payment total must match transaction total');
+        // For non-credit sales: payment must cover the total (overpayment is fine — cashier gives change)
+        if (!isCreditSale && normalizedImmediatePaymentAmount.lessThan(totalAmount.minus(new Prisma.Decimal(0.01)))) {
+            throw new BadRequestError('Payment amount is insufficient to cover the transaction total');
         }
 
         if (isCreditSale && immediatePaymentAmount.greaterThan(totalAmount)) {

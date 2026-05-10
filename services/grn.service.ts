@@ -219,16 +219,7 @@ export async function acceptGRN(grnId: string): Promise<void> {
           status: 'RECEIVED',
         },
       });
-
-      // Create GL entry for goods acceptance
-      await createLedgerEntry({
-        entryDate: new Date(),
-        description: `Goods accepted - GRN for PO ${grn.purchaseOrderId}`,
-        debitAccount: 'Inventory',
-        creditAccount: 'Goods Received Clearing',
-        amount: Number(po.totalAmount),
-        referenceId: grnId,
-      }, tx);
+      // Ledger entry was already written at GRN creation — no duplicate entry here.
     }
   });
 }
