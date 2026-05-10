@@ -26,7 +26,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await deleteOrderPayment((await params).paymentId);
+    const { paymentId } = await params;
+    await deleteOrderPayment(paymentId);
 
     return NextResponse.json({
       success: true,
@@ -34,8 +35,15 @@ export async function DELETE(
     });
   } catch (error: any) {
     logger.error({ err: error }, 'Error deleting payment:');
+    const msg = error.message || '';
+    if (msg.includes('not found') || msg.includes('Not found')) {
+      return NextResponse.json({ success: false, error: msg }, { status: 404 });
+    }
+    if (msg.includes('not linked')) {
+      return NextResponse.json({ success: false, error: msg }, { status: 409 });
+    }
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: msg || 'Internal server error' },
       { status: 500 }
     );
   }

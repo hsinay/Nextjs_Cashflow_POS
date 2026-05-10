@@ -98,7 +98,7 @@ export async function createPartialReceipt(
 
     // No per-item status or quantityReceived, so skip PO status update logic
 
-    // Create GL entry for partial receipt
+    // Create GL entry for partial receipt (pass tx to keep it atomic)
     await createLedgerEntry({
       entryDate: receiptDate,
       description: `Partial receipt for PO ${purchaseOrderId}`,
@@ -106,7 +106,7 @@ export async function createPartialReceipt(
       creditAccount: 'Accounts Payable',
       amount: totalAmount,
       referenceId: purchaseOrderId,
-    });
+    }, tx as any);
 
     return receipt;
   });

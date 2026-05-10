@@ -25,17 +25,21 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payments = await getOrderPayments((await params).id);
-    const summary = await getOrderPaymentSummary((await params).id);
+    const { id } = await params;
+    const summary = await getOrderPaymentSummary(id);
 
     return NextResponse.json({
       success: true,
-      data: { payments, summary },
+      data: { payments: summary.payments, summary },
     });
   } catch (error: any) {
     logger.error({ err: error }, 'Error fetching payments:');
+    const msg = error.message || '';
+    if (msg.includes('not found')) {
+      return NextResponse.json({ success: false, error: msg }, { status: 404 });
+    }
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: msg || 'Internal server error' },
       { status: 500 }
     );
   }
@@ -56,11 +60,11 @@ export async function POST(
     }
 
     const body = await req.json();
-    
-    // Validate input
+    const { id } = await params;
+
     const validated = createOrderPaymentSchema.parse({
       ...body,
-      salesOrderId: (await params).id,
+      salesOrderId: id,
     });
 
     const payment = await createOrderPayment(validated);
@@ -71,8 +75,7 @@ export async function POST(
     );
   } catch (error: any) {
     logger.error({ err: error }, 'Error creating payment:');
-    
-    // Handle validation errors
+
     if (error.errors) {
       return NextResponse.json(
         { success: false, error: 'Validation failed', details: error.errors },
@@ -80,8 +83,16 @@ export async function POST(
       );
     }
 
+    const msg = error.message || '';
+    if (msg.includes('not found') || msg.includes('Not found')) {
+      return NextResponse.json({ success: false, error: msg }, { status: 404 });
+    }
+    if (msg.includes('exceeds') || msg.includes('balance') || msg.includes('credit')) {
+      return NextResponse.json({ success: false, error: msg }, { status: 409 });
+    }
+
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: msg || 'Internal server error' },
       { status: 500 }
     );
   }

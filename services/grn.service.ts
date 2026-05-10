@@ -109,7 +109,7 @@ export async function createGRN(data: CreateGRNInput): Promise<GRNRecord> {
         },
       });
 
-      // Create inventory transaction for received quantity
+      // Create inventory transaction for received quantity (pass tx to keep it atomic)
       if (item.quantityReceived > 0) {
         await createInventoryTransaction({
           productId: poItem.productId,
@@ -117,11 +117,11 @@ export async function createGRN(data: CreateGRNInput): Promise<GRNRecord> {
           quantity: item.quantityReceived,
           referenceId: grn.id,
           notes: `Goods received - GRN for PO ${purchaseOrderId}`,
-        });
+        }, tx as any);
       }
     }
 
-    // Create GL entry for goods receipt
+    // Create GL entry for goods receipt (pass tx to keep it atomic)
     await createLedgerEntry({
       entryDate: grnDate,
       description: `Goods received - GRN for PO ${purchaseOrderId}`,
@@ -129,7 +129,7 @@ export async function createGRN(data: CreateGRNInput): Promise<GRNRecord> {
       creditAccount: 'Goods Received Clearing',
       amount: Number(po.totalAmount),
       referenceId: purchaseOrderId,
-    });
+    }, tx as any);
 
     // Return created GRN with items
     // Pass the correct Prisma client type for tx
@@ -237,7 +237,7 @@ export async function rejectGRNItem(grnItemId: string, reason: string): Promise<
     throw new Error('GRN item not found');
   }
 
-    return await runInteractiveTransaction(async () => {
+    return await runInteractiveTransaction(async (tx) => {
     // Create reverse inventory transaction
     await createInventoryTransaction({
       productId: grnItem.productId,
@@ -245,7 +245,7 @@ export async function rejectGRNItem(grnItemId: string, reason: string): Promise<
       quantity: -grnItem.quantityRejected,
       referenceId: grnItem.goodsReceivedNoteId,
       notes: `Goods rejected - Reason: ${reason}`,
-    });
+    }, tx as any);
 
     // Update GRN item
     // No updatable field for rejection reason or status in GRNItem schema

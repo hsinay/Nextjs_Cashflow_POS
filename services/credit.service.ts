@@ -249,7 +249,9 @@ class CreditService extends BaseRepository<CustomerCredit> {
     if (!account) return;
 
     const now = new Date();
-    const interestRate = 0.02; // 2% per month (configurable)
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    const interestRate = termsConfigService.getConfig().monthlyInterestRate;
 
     for (const transaction of account.transactions) {
       if (transaction.isFullyPaid) continue;
@@ -257,11 +259,19 @@ class CreditService extends BaseRepository<CustomerCredit> {
       const daysPastDue = Math.max(0, Math.floor((now.getTime() - transaction.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
 
       if (daysPastDue > 0) {
-        // Interest calculation: (balance * rate * days) / 365
+        // Skip if interest was already recorded today for this transaction
+        const existingToday = await prisma.interestEntry.findFirst({
+          where: {
+            creditTransactionId: transaction.id,
+            calculatedDate: { gte: todayStart, lt: todayEnd },
+          },
+          select: { id: true },
+        });
+        if (existingToday) continue;
+
         const dailyRate = new Prisma.Decimal(interestRate).div(365);
         const interestAmount = transaction.balanceAmount.mul(dailyRate).mul(daysPastDue);
 
-        // Create interest entry
         await prisma.interestEntry.create({
           data: {
             customerId,
@@ -278,7 +288,6 @@ class CreditService extends BaseRepository<CustomerCredit> {
       }
     }
 
-    // Update account totals
     await this.updateAccountTotals(account.id);
   }
 
